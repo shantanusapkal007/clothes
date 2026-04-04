@@ -1,0 +1,133 @@
+/**
+ * Barcode parser - Extracts product data from various barcode formats
+ * Supports: CODE128, UPC, EAN with embedded price/discount information
+ */
+
+export interface BarcodeData {
+  barcode: string;
+  price?: number;
+  discount?: number;
+  quantity?: number;
+  rawData: string;
+}
+
+/**
+ * Parse barcode data from scanned text
+ * Formats:
+ * - Simple barcode: "123456789"
+ * - With price: "123456789|25.99" or "123456789:25.99"
+ * - With price and discount: "123456789|25.99|10" or "123456789:25.99:10"
+ * - With quantity: "123456789|25.99|10|2" (barcode|price|discount%|quantity)
+ */
+export function parseBarcodeData(scannedText: string): BarcodeData {
+  const trimmed = scannedText.trim();
+
+  // Try pipe-separated format first
+  if (trimmed.includes("|")) {
+    return parsePipeFormat(trimmed);
+  }
+
+  // Try colon-separated format
+  if (trimmed.includes(":")) {
+    return parseColonFormat(trimmed);
+  }
+
+  // Plain barcode (no price/discount embedded)
+  return {
+    barcode: trimmed,
+    rawData: trimmed
+  };
+}
+
+function parsePipeFormat(data: string): BarcodeData {
+  const parts = data.split("|").map(p => p.trim());
+  const barcode = parts[0];
+
+  const result: BarcodeData = {
+    barcode,
+    rawData: data
+  };
+
+  // Parse price (second part)
+  if (parts[1]) {
+    const priceNum = parseFloat(parts[1]);
+    if (!isNaN(priceNum)) {
+      result.price = Math.abs(priceNum);
+    }
+  }
+
+  // Parse discount percentage (third part)
+  if (parts[2]) {
+    const discountNum = parseFloat(parts[2]);
+    if (!isNaN(discountNum)) {
+      result.discount = Math.max(0, Math.min(100, discountNum));
+    }
+  }
+
+  // Parse quantity (fourth part)
+  if (parts[3]) {
+    const quantityNum = parseInt(parts[3], 10);
+    if (!isNaN(quantityNum) && quantityNum > 0) {
+      result.quantity = quantityNum;
+    }
+  }
+
+  return result;
+}
+
+function parseColonFormat(data: string): BarcodeData {
+  const parts = data.split(":").map(p => p.trim());
+  const barcode = parts[0];
+
+  const result: BarcodeData = {
+    barcode,
+    rawData: data
+  };
+
+  if (parts[1]) {
+    const priceNum = parseFloat(parts[1]);
+    if (!isNaN(priceNum)) {
+      result.price = Math.abs(priceNum);
+    }
+  }
+
+  if (parts[2]) {
+    const discountNum = parseFloat(parts[2]);
+    if (!isNaN(discountNum)) {
+      result.discount = Math.max(0, Math.min(100, discountNum));
+    }
+  }
+
+  if (parts[3]) {
+    const quantityNum = parseInt(parts[3], 10);
+    if (!isNaN(quantityNum) && quantityNum > 0) {
+      result.quantity = quantityNum;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Format barcode with embedded data for display/debugging
+ */
+export function formatBarcodeString(
+  barcode: string,
+  price?: number,
+  discount?: number,
+  quantity?: number
+): string {
+  let result = barcode;
+
+  if (price !== undefined) {
+    result += `|${price.toFixed(2)}`;
+    if (discount !== undefined || quantity !== undefined) {
+      result += `|${discount ?? 0}`;
+      if (quantity !== undefined) {
+        result += `|${quantity}`;
+      }
+    }
+  }
+
+  return result;
+}

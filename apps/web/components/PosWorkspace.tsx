@@ -5,12 +5,17 @@ import { CartPanel } from "./CartPanel";
 import { CreateProductModal } from "./CreateProductModal";
 import { ProductGrid } from "./ProductGrid";
 import { ScannerPanel } from "./ScannerPanel";
+import { BillPrintPreview } from "./BillPrintPreview";
+import { PrinterSettings } from "./PrinterSettings";
 import { checkoutBill, createProduct, getProductByBarcode, getProducts } from "../lib/api";
 import { useCartStore } from "../lib/cart-store";
+import { parseBarcodeData } from "../lib/barcode-parser";
+import { calculateCheckout } from "../lib/billing";
 import type { Product } from "../types";
+import type { CheckoutSummary } from "../lib/billing";
 
 export function PosWorkspace() {
-  const { addItem, items, clearCart } = useCartStore();
+  const { addItem, items, clearCart, updateItem } = useCartStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -20,6 +25,9 @@ export function PosWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [createBarcode, setCreateBarcode] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
+  const [billPreviewOpen, setBillPreviewOpen] = useState(false);
+  const [billData, setBillData] = useState<CheckoutSummary | null>(null);
 
   const visibleProducts = useMemo(() => {
     if (!search.trim()) {
@@ -63,11 +71,36 @@ export function PosWorkspace() {
     }
 
     try {
-      const product = await getProductByBarcode(barcode.trim());
+      // Parse barcode data (may contain price/discount embedded)
+      const barcodeData = parseBarcodeData(barcode.trim());
+
+      const product = await getProductByBarcode(barcodeData.barcode);
+      
+      // Add product to cart
       handleProductAdd(product);
+
+      // Apply price/discount override if embedded in barcode
+      const cartItem = items.find((item) => item.productId === product.id);
+      if (cartItem) {
+        if (barcodeData.price !== undefined) {
+          updateItem(product.id, "price", barcodeData.price);
+          setMessage(`${product.name} added (price: Rs ${barcodeData.price.toFixed(2)})`);
+        } else {
+          setMessage(`${product.name} added to cart`);
+        }
+
+        if (barcodeData.discount !== undefined && barcodeData.discount > 0) {
+          updateItem(product.id, "discountPercent", barcodeData.discount);
+        }
+
+        if (barcodeData.quantity !== undefined && barcodeData.quantity > 1) {
+          updateItem(product.id, "quantity", barcodeData.quantity);
+        }
+      }
+
       setBarcodeInput("");
     } catch {
-      setCreateBarcode(barcode.trim());
+      setCreateBarcode(barcode.trim().split("|")[0]); // Create product with just barcode
       setCreateModalOpen(true);
       setMessage(null);
       setError("Barcode not found. Create the product and continue.");
@@ -98,8 +131,39 @@ export function PosWorkspace() {
     try {
       setCheckoutPending(true);
       setError(null);
+
+      // Calculate bill summary
+      const checkoutItems = items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        discountPercent: item.discountPercent,
+        taxPercent: item.taxPercent
+      }));
+
+      const summary = calculateCheckout(checkoutItems);
+
+      // Show bill preview before actual checkout
+      setBillData({
+        ...summary,
+        items: items.map((item) => ({
+          ...summary.items.find((si) => si.productId === item.productId) || {},
+          productName: item.name
+        }))
+      });
+      setBillPreviewOpen(true);
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : "Checkout failed");
+      setCheckoutPending(false);
+    }
+  };
+
+  const handleConfirmCheckout = async (paymentMethod: string) => {
+    try {
       const result = await checkoutBill(items, paymentMethod);
       clearCart();
+      setBillPreviewOpen(false);
+      setBillData(null);
       setMessage(`Bill ${result.id.slice(0, 8)} saved successfully`);
       await loadProducts();
     } catch (checkoutError) {
@@ -139,12 +203,41 @@ export function PosWorkspace() {
         </div>
 
         <div className="workspace-right">
-          <CartPanel onCheckout={handleCheckout} checkoutPending={checkoutPending} />
+          <div className="panel-options">
+            <button
+              className="button button-secondary button-small"
+              onClick={() => setPrinterSettingsOpen(true)}
+              title="Configure thermal printer and bill layout"
+            >
+              ⚙️ Printer Settings
+            </button>
+          </div>
+          <CartPanel
+            onCheckout={handleCheckout}
+            checkoutPending={checkoutPending}
+          />
         </div>
       </div>
 
       {message ? <p className="success-text">{message}</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
+
+      {billPreviewOpen && billData && (
+        <BillPrintPreview
+          bill={billData}
+          billNumber={Math.random().toString(36).substring(7).toUpperCase()}
+          onPrint={() => handleConfirmCheckout("cash")}
+          onClose={() => {
+            setBillPreviewOpen(false);
+            setBillData(null);
+            setCheckoutPending(false);
+          }}
+        />
+      )}
+
+      {printerSettingsOpen && (
+        <PrinterSettings onClose={() => setPrinterSettingsOpen(false)} />
+      )}
 
       <CreateProductModal
         barcode={createBarcode}
