@@ -55,6 +55,37 @@ npm run dev:api
 npm run dev:web
 ```
 
+## Deployment
+
+### Railway
+
+- Deploy `apps/api` as the service root directory
+- Add a Railway PostgreSQL database
+- Set `DATABASE_URL` from that database
+- Build command:
+
+```bash
+npm install && npx prisma generate && npm run build
+```
+
+- Pre-deploy command:
+
+```bash
+npm run db:migrate:deploy
+```
+
+- Start command:
+
+```bash
+npm run start
+```
+
+### Vercel
+
+- Deploy `apps/web` as the project root directory
+- Set `NEXT_PUBLIC_API_URL` to the Railway API URL
+- Redeploy after changing environment variables
+
 ## Main flows
 
 - Scan or type a barcode
