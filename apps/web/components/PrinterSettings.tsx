@@ -94,21 +94,33 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
       ];
 
       // Try to print via ESC/POS if USB printer available
-      if (printerConfig.connected && navigator.usb) {
-        const devices = await navigator.usb.getDevices();
-        if (devices.length > 0) {
-          const device = devices[0];
-          await device.open();
-          if (device.configuration === null) {
-            await device.selectConfiguration(1);
+      const hasUSB = typeof navigator !== "undefined" && "usb" in navigator;
+      if (printerConfig.connected && hasUSB) {
+        try {
+          const devices = await (navigator as any).usb.getDevices();
+          if (devices.length > 0) {
+            const device = devices[0];
+            await device.open();
+            if (device.configuration === null) {
+              await device.selectConfiguration(1);
+            }
+            await device.claimInterface(0);
+
+            const data = new TextEncoder().encode(testContent.join("\n"));
+            await device.transferOut(1, data);
+            await device.close();
+
+            setMessage("Test print sent to printer!");
           }
-          await device.claimInterface(0);
-
-          const data = new TextEncoder().encode(testContent.join("\n"));
-          await device.transferOut(1, data);
-          await device.close();
-
-          setMessage("Test print sent to printer!");
+        } catch {
+          // Fall back to browser print if USB fails
+          const printWindow = window.open("", "PRINT", "height=600,width=800");
+          if (printWindow) {
+            printWindow.document.write("<pre>" + testContent.join("\n") + "</pre>");
+            printWindow.document.close();
+            printWindow.print();
+            setMessage("Test print opened in new window");
+          }
         }
       } else {
         // Fallback to browser print

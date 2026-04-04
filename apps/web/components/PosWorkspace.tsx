@@ -12,7 +12,22 @@ import { useCartStore } from "../lib/cart-store";
 import { parseBarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
 import type { Product } from "../types";
-import type { CheckoutSummary } from "../lib/billing";
+
+type BillDataWithProducts = ReturnType<typeof calculateCheckout> & {
+  items?: Array<{
+    productName: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    discountPercent: number;
+    taxPercent: number;
+    lineSubtotal: number;
+    discountAmount: number;
+    taxableAmount: number;
+    taxAmount: number;
+    total: number;
+  }>;
+};
 
 export function PosWorkspace() {
   const { addItem, items, clearCart, updateItem } = useCartStore();
@@ -27,7 +42,7 @@ export function PosWorkspace() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
   const [billPreviewOpen, setBillPreviewOpen] = useState(false);
-  const [billData, setBillData] = useState<CheckoutSummary | null>(null);
+  const [billData, setBillData] = useState<BillDataWithProducts | null>(null);
 
   const visibleProducts = useMemo(() => {
     if (!search.trim()) {
@@ -144,12 +159,14 @@ export function PosWorkspace() {
       const summary = calculateCheckout(checkoutItems);
 
       // Show bill preview before actual checkout
+      const billItems = summary.items.map((summaryItem) => ({
+        ...summaryItem,
+        productName: items.find((item) => item.productId === summaryItem.productId)?.name || "Item"
+      }));
+
       setBillData({
         ...summary,
-        items: items.map((item) => ({
-          ...summary.items.find((si) => si.productId === item.productId) || {},
-          productName: item.name
-        }))
+        items: billItems
       });
       setBillPreviewOpen(true);
     } catch (checkoutError) {

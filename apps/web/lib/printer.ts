@@ -179,13 +179,13 @@ export function generateEscPos(
  * List available USB printers (requires appropriate browser/OS permissions)
  */
 export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
-  if (!navigator.usb) {
+  if (typeof navigator === "undefined" || !("usb" in navigator)) {
     return [];
   }
 
   try {
-    const devices = await navigator.usb.getDevices();
-    return devices.map((device) => ({
+    const devices = await (navigator as any).usb.getDevices();
+    return devices.map((device: any) => ({
       name: device.productName || `USB Printer (${device.productId})`,
       deviceId: device.serialNumber,
       vendorId: device.vendorId.toString(),
@@ -202,12 +202,12 @@ export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
  * Request USB printer from user
  */
 export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
-  if (!navigator.usb) {
+  if (typeof navigator === "undefined" || !("usb" in navigator)) {
     return null;
   }
 
   try {
-    const device = await navigator.usb.requestDevice({
+    const device = await (navigator as any).usb.requestDevice({
       filters: [
         { vendorId: 0x0416 }, // Zebra
         { vendorId: 0x04b8 }, // Epson
