@@ -2,9 +2,15 @@ import type { BillResponse, Product } from "../types";
 import type { CartItem } from "../types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+const API_PREFIX = "/api";
+
+function buildApiUrl(path: string) {
+  const normalizedPath = path.startsWith(API_PREFIX) ? path : `${API_PREFIX}${path}`;
+  return `${API_URL}${normalizedPath}`;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(buildApiUrl(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -14,8 +20,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message || "Request failed");
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? ((await response.json().catch(() => null)) as { message?: string } | null)
+      : null;
+    const text = payload?.message || (await response.text().catch(() => ""));
+    throw new Error(text || `Request failed with status ${response.status}`);
   }
 
   if (response.status === 204) {

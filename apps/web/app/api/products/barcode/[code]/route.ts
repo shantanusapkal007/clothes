@@ -15,16 +15,21 @@ export async function GET(
     params: Promise<{ code: string }>;
   }
 ) {
-  const params = paramsSchema.parse(await context.params);
-  const product = await prisma.product.findUnique({
-    where: {
-      barcode: params.code
+  try {
+    const params = paramsSchema.parse(await context.params);
+    const product = await prisma.product.findUnique({
+      where: {
+        barcode: params.code
+      }
+    });
+
+    if (!product) {
+      return NextResponse.json({ message: "Product not found" }, { status: 404 });
     }
-  });
 
-  if (!product) {
-    return NextResponse.json({ message: "Product not found" }, { status: 404 });
+    return NextResponse.json(mapProduct(product));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load product";
+    return NextResponse.json({ message }, { status: 500 });
   }
-
-  return NextResponse.json(mapProduct(product));
 }

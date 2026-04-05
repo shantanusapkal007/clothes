@@ -23,16 +23,21 @@ const checkoutSchema = z.object({
 });
 
 export async function GET() {
-  const bills = await prisma.bill.findMany({
-    include: {
-      items: true
-    },
-    orderBy: {
-      createdAt: "desc"
-    }
-  });
+  try {
+    const bills = await prisma.bill.findMany({
+      include: {
+        items: true
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
 
-  return NextResponse.json(bills.map(mapBill));
+    return NextResponse.json(bills.map(mapBill));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load bills";
+    return NextResponse.json({ message }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -19,24 +19,29 @@ const productSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const search = request.nextUrl.searchParams.get("search")?.trim();
+  try {
+    const search = request.nextUrl.searchParams.get("search")?.trim();
 
-  const products = await prisma.product.findMany({
-    where: search
-      ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { category: { contains: search, mode: "insensitive" } },
-            { barcode: { contains: search, mode: "insensitive" } }
-          ]
-        }
-      : undefined,
-    orderBy: {
-      updatedAt: "desc"
-    }
-  });
+    const products = await prisma.product.findMany({
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+              { barcode: { contains: search, mode: "insensitive" } }
+            ]
+          }
+        : undefined,
+      orderBy: {
+        updatedAt: "desc"
+      }
+    });
 
-  return NextResponse.json(products.map(mapProduct));
+    return NextResponse.json(products.map(mapProduct));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load products";
+    return NextResponse.json({ message }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {

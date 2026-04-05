@@ -1,140 +1,48 @@
-"use client";
+import type { FormEvent } from "react";
 
-import { FormEvent, useEffect, useId, useRef, useState } from "react";
-
-type ScannerPanelProps = {
+interface ScannerPanelProps {
   barcodeInput: string;
-  setBarcodeInput: (value: string) => void;
-  onBarcodeSubmit: (barcode: string) => Promise<void>;
-};
+  setBarcodeInput: (val: string) => void;
+  onBarcodeSubmit: (barcode: string) => void;
+}
 
 export function ScannerPanel({
   barcodeInput,
   setBarcodeInput,
   onBarcodeSubmit
 }: ScannerPanelProps) {
-  const [cameraEnabled, setCameraEnabled] = useState(false);
-  const [scannerError, setScannerError] = useState<string | null>(null);
-  const [scannerReady, setScannerReady] = useState(false);
-  const scannerId = useId().replace(/:/g, "");
-  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
-  const submitRef = useRef(onBarcodeSubmit);
-
-  useEffect(() => {
-    submitRef.current = onBarcodeSubmit;
-  }, [onBarcodeSubmit]);
-
-  useEffect(() => {
-    if (!cameraEnabled) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function startScanner() {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        const scanner = new Html5Qrcode(scannerId);
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 240, height: 120 } },
-          async (decodedText) => {
-            if (cancelled) {
-              return;
-            }
-
-            await scanner.stop();
-            await scanner.clear();
-            scannerRef.current = null;
-            setCameraEnabled(false);
-            setBarcodeInput(decodedText);
-            await submitRef.current(decodedText);
-          },
-          () => undefined
-        );
-
-        if (!cancelled) {
-          setScannerReady(true);
-          setScannerError(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setScannerError(
-            error instanceof Error ? error.message : "Unable to start camera scanner"
-          );
-          setCameraEnabled(false);
-        }
-      }
-    }
-
-    startScanner();
-
-    return () => {
-      cancelled = true;
-      setScannerReady(false);
-      const scanner = scannerRef.current;
-      if (scanner) {
-        void scanner
-          .stop()
-          .catch(() => undefined)
-          .then(() => {
-            scanner.clear();
-          });
-        scannerRef.current = null;
-      }
-    };
-  }, [cameraEnabled, scannerId, setBarcodeInput]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onBarcodeSubmit(barcodeInput);
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    onBarcodeSubmit(barcodeInput);
   };
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Scanner</p>
-          <h2>Barcode-first checkout</h2>
+    <div className="glass-panel p-6 md:p-8 rounded-lg shadow-sm">
+      <form onSubmit={handleSubmit} className="flex items-center gap-4">
+        <div className="flex-1 relative">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm md:text-base">
+            barcode_scanner
+          </span>
+          <input
+            className="w-full bg-surface-container-lowest border-none ring-1 ring-outline-variant/30 rounded-lg py-3 md:py-4 pl-10 md:pl-12 pr-4 focus:ring-2 focus:ring-primary/20 transition-all font-body text-sm md:text-base"
+            placeholder="Scan or enter SKU number..."
+            type="text"
+            value={barcodeInput}
+            onChange={(e) => setBarcodeInput(e.target.value)}
+            // Auto focus for easy scanning
+            autoFocus
+          />
         </div>
-        <span className="badge badge-muted">USB + Camera</span>
-      </div>
-
-      <form className="scanner-form" onSubmit={handleSubmit}>
-        <input
-          className="text-input"
-          placeholder="Scan with USB or type barcode"
-          value={barcodeInput}
-          onChange={(event) => setBarcodeInput(event.target.value)}
-        />
-        <button className="button button-primary" type="submit">
-          Find product
+        <button
+          type="button"
+          className="bg-primary text-on-primary w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center hover:bg-primary-container transition-all active:scale-95 shadow-lg shrink-0"
+          title="Open Camera Scanner"
+        >
+          <span className="material-symbols-outlined" data-weight="fill">
+            photo_camera
+          </span>
         </button>
       </form>
-
-      <div className="scanner-actions">
-        <button
-          className="button button-secondary"
-          type="button"
-          onClick={() => setCameraEnabled((value) => !value)}
-        >
-          {cameraEnabled ? "Stop camera" : "Open camera"}
-        </button>
-        <p className="muted">
-          If a barcode matches, the product is added to the cart immediately.
-        </p>
-      </div>
-
-      {cameraEnabled ? (
-        <div className="scanner-box">
-          <div id={scannerId} />
-          <p className="muted">{scannerReady ? "Camera is live" : "Starting camera..."}</p>
-        </div>
-      ) : null}
-
-      {scannerError ? <p className="error-text">{scannerError}</p> : null}
-    </section>
+    </div>
   );
 }

@@ -1,13 +1,17 @@
 /**
  * Thermal Printer Integration
- * Supports ESC/POS protocol for thermal printers
+ * Supports ESC/POS protocol for thermal printers via USB and Bluetooth
  */
+
+export type ConnectionType = "usb" | "bluetooth" | "none";
 
 export interface PrinterConfig {
   name: string;
+  connectionType: ConnectionType;
   deviceId?: string;
   vendorId?: string;
   productId?: string;
+  bluetoothDeviceId?: string;
   width: number; // in mm, typically 80 or 58
   connected: boolean;
 }
@@ -31,6 +35,7 @@ export interface BillLayoutConfig {
 // Default printer configuration
 export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   name: "Default Thermal Printer",
+  connectionType: "none",
   width: 80,
   connected: false
 };
@@ -59,7 +64,12 @@ export function getPrinterConfig(): PrinterConfig {
   const stored = localStorage.getItem("printer-config");
   if (stored) {
     try {
-      return JSON.parse(stored) as PrinterConfig;
+      const parsed = JSON.parse(stored) as PrinterConfig;
+      // Migrate old configs that don't have connectionType
+      if (!parsed.connectionType) {
+        parsed.connectionType = "none";
+      }
+      return parsed;
     } catch {
       return DEFAULT_PRINTER_CONFIG;
     }
@@ -175,6 +185,8 @@ export function generateEscPos(
   return commands;
 }
 
+// ─── USB Printer Functions ───────────────────────────────────────────────────
+
 /**
  * List available USB printers (requires appropriate browser/OS permissions)
  */
@@ -187,6 +199,7 @@ export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
     const devices = await (navigator as any).usb.getDevices();
     return devices.map((device: any) => ({
       name: device.productName || `USB Printer (${device.productId})`,
+      connectionType: "usb" as ConnectionType,
       deviceId: device.serialNumber,
       vendorId: device.vendorId.toString(),
       productId: device.productId.toString(),
@@ -216,14 +229,207 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
     });
 
     return {
-      name: device.productName || "Thermal Printer",
+      name: device.productName || "Thermal Printer (USB)",
+      connectionType: "usb",
       deviceId: device.serialNumber,
       vendorId: device.vendorId.toString(),
       productId: device.productId.toString(),
       width: 80,
-      connected: false
+      connected: true
     };
   } catch {
     return null;
   }
+}
+
+// ─── Bluetooth Printer Functions ─────────────────────────────────────────────
+
+/**
+ * Common Bluetooth service UUIDs for ESC/POS thermal printers
+ */
+const BT_PRINTER_SERVICE_UUIDS = [
+  "000018f0-0000-1000-8000-00805f9b34fb", // Common ESC/POS printers
+  "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // Generic serial
+  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // Microchip ISSC / many BT printers
+];
+
+const BT_PRINTER_CHAR_UUIDS = [
+  "00002af1-0000-1000-8000-00805f9b34fb", // Common write characteristic
+  "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f", // Generic serial write
+  "49535343-8841-43f4-a8d4-ecbe34729bb3", // ISSC write characteristic
+];
+
+// In-memory cache for active Bluetooth connection
+let _btDevice: BluetoothDevice | null = null;
+let _btCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+
+/**
+ * Check if Web Bluetooth is available
+ */
+export function isBluetoothAvailable(): boolean {
+  return typeof navigator !== "undefined" && "bluetooth" in navigator;
+}
+
+/**
+ * Request a Bluetooth printer from the user via system picker
+ */
+export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
+  if (!isBluetoothAvailable()) {
+    return null;
+  }
+
+  try {
+    // Request device — use acceptAllDevices with optionalServices since
+    // many cheap thermal printers don't advertise standard service UUIDs
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: BT_PRINTER_SERVICE_UUIDS
+    });
+
+    if (!device) return null;
+
+    // Cache device reference
+    _btDevice = device;
+
+    return {
+      name: device.name || "Bluetooth Printer",
+      connectionType: "bluetooth",
+      bluetoothDeviceId: device.id,
+      width: 80,
+      connected: true
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Connect to a previously paired Bluetooth printer and discover the write characteristic
+ */
+export async function connectBluetoothPrinter(): Promise<BluetoothRemoteGATTCharacteristic | null> {
+  if (!_btDevice) return null;
+
+  try {
+    const server = await _btDevice.gatt!.connect();
+
+    // Try each known service UUID until we find a writable characteristic
+    for (const serviceUuid of BT_PRINTER_SERVICE_UUIDS) {
+      try {
+        const service = await server.getPrimaryService(serviceUuid);
+        const characteristics = await service.getCharacteristics();
+
+        for (const char of characteristics) {
+          // Look for a writable characteristic
+          if (
+            char.properties.write ||
+            char.properties.writeWithoutResponse
+          ) {
+            _btCharacteristic = char;
+            return char;
+          }
+        }
+      } catch {
+        // This service UUID doesn't exist on the device, try next
+        continue;
+      }
+    }
+
+    // Fallback: try known characteristic UUIDs directly
+    const services = await server.getPrimaryServices();
+    for (const service of services) {
+      for (const charUuid of BT_PRINTER_CHAR_UUIDS) {
+        try {
+          const char = await service.getCharacteristic(charUuid);
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            _btCharacteristic = char;
+            return char;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Send raw data to the connected Bluetooth printer
+ * Splits data into chunks to respect BLE MTU limits (typically 512 bytes max)
+ */
+export async function sendBluetoothData(data: Uint8Array): Promise<boolean> {
+  if (!_btCharacteristic) {
+    // Try to reconnect
+    const char = await connectBluetoothPrinter();
+    if (!char) return false;
+  }
+
+  try {
+    const CHUNK_SIZE = 200; // Safe chunk size for most BLE printers
+    for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
+      const chunk = data.slice(offset, offset + CHUNK_SIZE);
+      if (_btCharacteristic!.properties.writeWithoutResponse) {
+        await _btCharacteristic!.writeValueWithoutResponse(chunk);
+      } else {
+        await _btCharacteristic!.writeValueWithResponse(chunk);
+      }
+      // Small delay between chunks to let the printer buffer
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Disconnect the current Bluetooth printer
+ */
+export function disconnectBluetoothPrinter(): void {
+  if (_btDevice?.gatt?.connected) {
+    _btDevice.gatt.disconnect();
+  }
+  _btDevice = null;
+  _btCharacteristic = null;
+}
+
+// ─── Unified Print Function ──────────────────────────────────────────────────
+
+/**
+ * Send print data using the appropriate connection method
+ * Returns true if printed successfully, false if fallback to browser print is needed
+ */
+export async function sendPrintData(
+  content: string,
+  config: PrinterConfig
+): Promise<boolean> {
+  const data = new TextEncoder().encode(content);
+
+  if (config.connectionType === "bluetooth" && config.connected) {
+    return sendBluetoothData(data);
+  }
+
+  if (config.connectionType === "usb" && config.connected) {
+    try {
+      const devices = await (navigator as any).usb.getDevices();
+      if (devices.length > 0) {
+        const device = devices[0];
+        await device.open();
+        if (device.configuration === null) {
+          await device.selectConfiguration(1);
+        }
+        await device.claimInterface(0);
+        await device.transferOut(1, data);
+        await device.close();
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  return false; // Fallback to browser print needed
 }

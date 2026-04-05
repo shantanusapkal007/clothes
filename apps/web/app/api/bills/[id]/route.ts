@@ -15,19 +15,24 @@ export async function GET(
     params: Promise<{ id: string }>;
   }
 ) {
-  const params = paramsSchema.parse(await context.params);
-  const bill = await prisma.bill.findUnique({
-    where: {
-      id: params.id
-    },
-    include: {
-      items: true
+  try {
+    const params = paramsSchema.parse(await context.params);
+    const bill = await prisma.bill.findUnique({
+      where: {
+        id: params.id
+      },
+      include: {
+        items: true
+      }
+    });
+
+    if (!bill) {
+      return NextResponse.json({ message: "Bill not found" }, { status: 404 });
     }
-  });
 
-  if (!bill) {
-    return NextResponse.json({ message: "Bill not found" }, { status: 404 });
+    return NextResponse.json(mapBill(bill));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load bill";
+    return NextResponse.json({ message }, { status: 500 });
   }
-
-  return NextResponse.json(mapBill(bill));
 }
