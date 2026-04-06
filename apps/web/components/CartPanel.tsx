@@ -134,20 +134,20 @@ export function CartPanel({
               
               <div className="flex justify-between items-center px-4">
                 <span className="text-on-secondary-container text-sm">Subtotal</span>
-                <span className="font-medium text-sm">Rs {summary.subtotal.toFixed(2)}</span>
+                <span className="font-medium text-sm">Rs {summary.totalAmount.toFixed(2)}</span>
               </div>
               
-              {summary.totalDiscount > 0 && (
+              {summary.discountAmount > 0 && (
                 <div className="flex justify-between items-center px-4">
                   <span className="text-on-secondary-container text-sm">Discount</span>
-                  <span className="font-medium text-emerald-600 text-sm">-Rs {summary.totalDiscount.toFixed(2)}</span>
+                  <span className="font-medium text-emerald-600 text-sm">-Rs {summary.discountAmount.toFixed(2)}</span>
                 </div>
               )}
               
-              {summary.totalTax > 0 && (
+              {summary.taxAmount > 0 && (
                 <div className="flex justify-between items-center px-4">
                   <span className="text-on-secondary-container text-sm">Tax</span>
-                  <span className="font-medium text-sm">+Rs {summary.totalTax.toFixed(2)}</span>
+                  <span className="font-medium text-sm">+Rs {summary.taxAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>

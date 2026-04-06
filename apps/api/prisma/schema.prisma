@@ -8,19 +8,19 @@ datasource db {
 }
 
 model Product {
-  id               String     @id @default(cuid())
-  name             String
-  category         String?
-  barcode          String?    @unique
-  price            Decimal    @db.Decimal(10, 2)
-  costPrice        Decimal    @default(0) @map("cost_price") @db.Decimal(10, 2)
-  discountPercent  Decimal    @default(0) @map("discount_percent") @db.Decimal(5, 2)
-  taxPercent       Decimal    @default(0) @map("tax_percent") @db.Decimal(5, 2)
-  stock            Int        @default(0)
-  minStock         Int        @default(0) @map("min_stock")
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
-  billItems        BillItem[]
+  id              String     @id @default(cuid())
+  name            String
+  category        String?
+  barcode         String?    @unique
+  price           Decimal    @db.Decimal(10, 2)
+  costPrice       Decimal    @default(0) @map("cost_price") @db.Decimal(10, 2)
+  discountPercent Decimal    @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxPercent      Decimal    @default(0) @map("tax_percent") @db.Decimal(5, 2)
+  stock           Int        @default(0)
+  minStock        Int        @default(0) @map("min_stock")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  billItems       BillItem[]
 
   @@map("products")
 }
@@ -39,18 +39,18 @@ model Bill {
 }
 
 model BillItem {
-  id            String   @id @default(cuid())
-  billId        String   @map("bill_id")
-  productId     String   @map("product_id")
-  quantity      Int
-  price         Decimal  @db.Decimal(10, 2)
-  discount      Decimal  @db.Decimal(10, 2)
-  tax           Decimal  @db.Decimal(10, 2)
-  total         Decimal  @db.Decimal(10, 2)
-  productName   String   @map("product_name")
-  createdAt     DateTime @default(now()) @map("created_at")
-  bill          Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
-  product       Product  @relation(fields: [productId], references: [id])
+  id          String   @id @default(cuid())
+  billId      String   @map("bill_id")
+  productId   String   @map("product_id")
+  quantity    Int
+  price       Decimal  @db.Decimal(10, 2)
+  discount    Decimal  @db.Decimal(10, 2)
+  tax         Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  productName String   @map("product_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  bill        Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
 
   @@map("bill_items")
 }

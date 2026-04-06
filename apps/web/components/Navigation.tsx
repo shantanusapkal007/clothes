@@ -9,8 +9,8 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { name: "Sales", href: "/", icon: "payments" },
-    { name: "Stock", href: "/inventory", icon: "inventory_2" }
+    { name: "Sales", href: "/" as const, icon: "payments" },
+    { name: "Stock", href: "/inventory" as const, icon: "inventory_2" }
   ];
 
   return (

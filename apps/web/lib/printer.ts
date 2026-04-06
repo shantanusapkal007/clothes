@@ -260,8 +260,8 @@ const BT_PRINTER_CHAR_UUIDS = [
 ];
 
 // In-memory cache for active Bluetooth connection
-let _btDevice: BluetoothDevice | null = null;
-let _btCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+let _btDevice: any = null;
+let _btCharacteristic: any = null;
 
 /**
  * Check if Web Bluetooth is available
@@ -281,7 +281,7 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
   try {
     // Request device — use acceptAllDevices with optionalServices since
     // many cheap thermal printers don't advertise standard service UUIDs
-    const device = await navigator.bluetooth.requestDevice({
+    const device = await (navigator as any).bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: BT_PRINTER_SERVICE_UUIDS
     });
@@ -306,7 +306,7 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
 /**
  * Connect to a previously paired Bluetooth printer and discover the write characteristic
  */
-export async function connectBluetoothPrinter(): Promise<BluetoothRemoteGATTCharacteristic | null> {
+export async function connectBluetoothPrinter(): Promise<any> {
   if (!_btDevice) return null;
 
   try {

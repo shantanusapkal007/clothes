@@ -1,4 +1,6 @@
-import { getBillLayoutConfig, DEFAULT_BILL_LAYOUT, type BillLayoutConfig, printData } from "../lib/printer";
+import { getBillLayoutConfig, DEFAULT_BILL_LAYOUT, type BillLayoutConfig } from "../lib/printer";
+import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
+import type { Product } from "../types";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -88,7 +90,7 @@ export function BillPrintPreview({
                  </tr>
                </thead>
                <tbody className="divide-y divide-dotted divide-stone-200">
-                  {bill.items?.map((item, idx) => (
+                  {(bill.items as any)?.map((item: any, idx: number) => (
                     <tr key={idx}>
                       <td className="py-3 pr-2">
                         <div className="font-bold truncate max-w-[120px]">{item.productName}</div>
@@ -112,20 +114,20 @@ export function BillPrintPreview({
           <div className="border-t border-dashed border-stone-300 pt-4 space-y-2 mt-auto">
              <div className="flex justify-between text-xs">
                <span className="opacity-80">Subtotal</span>
-               <span>{bill.subtotal.toFixed(2)}</span>
+               <span>{bill.totalAmount.toFixed(2)}</span>
              </div>
              
-             {layout.showDiscountBreakdown && bill.totalDiscount > 0 && (
+             {layout.showDiscountBreakdown && bill.discountAmount > 0 && (
                <div className="flex justify-between text-xs">
                  <span className="opacity-80">Discount Total</span>
-                 <span>-{bill.totalDiscount.toFixed(2)}</span>
+                 <span>-{bill.discountAmount.toFixed(2)}</span>
                </div>
              )}
              
-             {layout.showTaxBreakdown && bill.totalTax > 0 && (
+             {layout.showTaxBreakdown && bill.taxAmount > 0 && (
                <div className="flex justify-between text-xs">
-                 <span className="opacity-80">Tax ({Math.round((bill.totalTax / bill.totalTaxable) * 100)}%)</span>
-                 <span>+{bill.totalTax.toFixed(2)}</span>
+                 <span className="opacity-80">Tax ({Math.round((bill.taxAmount / (bill.totalAmount - bill.discountAmount)) * 100)}%)</span>
+                 <span>+{bill.taxAmount.toFixed(2)}</span>
                </div>
              )}
              
