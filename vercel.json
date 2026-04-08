@@ -3,9 +3,5 @@
   "buildCommand": "npm run build:web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "env": {
-    "DATABASE_URL": "",
-    "NEXT_PUBLIC_API_URL": ""
-  }
+  "framework": "nextjs"
 }
