@@ -7,10 +7,5 @@
   "env": {
     "DATABASE_URL": "",
     "NEXT_PUBLIC_API_URL": ""
-  },
-  "functions": {
-    "apps/web/app/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
   }
 }
