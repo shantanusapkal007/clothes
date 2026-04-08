@@ -1,6 +1,16 @@
 {
+  "version": 2,
   "buildCommand": "npm run build:web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
+  },
+  "functions": {
+    "apps/web/app/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }
