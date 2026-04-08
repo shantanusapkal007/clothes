@@ -149,7 +149,6 @@ export function BillPrintPreview({
         <div className="p-4 bg-surface-container-high border-t border-outline-variant/30 flex flex-col gap-3 shrink-0 rounded-b-3xl">
            <button 
              onClick={() => {
-               onPrint();
                onConfirmCheckout();
              }}
              disabled={confirmPending}

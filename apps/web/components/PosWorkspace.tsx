@@ -95,32 +95,49 @@ export function PosWorkspace() {
       const barcodeData = parseBarcodeData(barcode.trim());
 
       const product = await getProductByBarcode(barcodeData.barcode);
-      
-      // Add product to cart
-      handleProductAdd(product);
 
-      // Apply price/discount override if embedded in barcode
-      const cartItem = items.find((item) => item.productId === product.id);
-      if (cartItem) {
+      addItem(product);
+
+      // Read the updated store state after addItem so barcode-driven overrides
+      // are applied to the actual cart line that was just inserted.
+      const cartItem = useCartStore
+        .getState()
+        .items.find((item) => item.productId === product.id);
+
+      if (!cartItem) {
+        setMessage(`${product.name} added to cart`);
+      } else {
         if (barcodeData.price !== undefined) {
           updateItem(product.id, "price", barcodeData.price);
-          setMessage(`${product.name} added (price: Rs ${barcodeData.price.toFixed(2)})`);
-        } else {
-          setMessage(`${product.name} added to cart`);
         }
 
-        if (barcodeData.discount !== undefined && barcodeData.discount > 0) {
+        if (barcodeData.discount !== undefined) {
           updateItem(product.id, "discountPercent", barcodeData.discount);
         }
 
-        if (barcodeData.quantity !== undefined && barcodeData.quantity > 1) {
+        if (barcodeData.quantity !== undefined && barcodeData.quantity > 0) {
           updateItem(product.id, "quantity", barcodeData.quantity);
         }
+
+        const messageBits = [`${product.name} added`];
+        if (barcodeData.price !== undefined) {
+          messageBits.push(`price Rs ${barcodeData.price.toFixed(2)}`);
+        }
+        if (barcodeData.discount !== undefined) {
+          messageBits.push(`discount ${barcodeData.discount}%`);
+        }
+        if (barcodeData.quantity !== undefined && barcodeData.quantity > 1) {
+          messageBits.push(`qty ${barcodeData.quantity}`);
+        }
+
+        setMessage(messageBits.join(" • "));
       }
+
+      setError(null);
 
       setBarcodeInput("");
     } catch {
-      setCreateBarcode(barcode.trim().split("|")[0]); // Create product with just barcode
+      setCreateBarcode(parseBarcodeData(barcode.trim()).barcode);
       setCreateModalOpen(true);
       setMessage(null);
       setError("Barcode not found. Create the product and continue.");
@@ -289,7 +306,7 @@ export function PosWorkspace() {
           billNumber={Math.random().toString(36).substring(7).toUpperCase()}
           paymentMethod={selectedPaymentMethod}
           confirmPending={checkoutPending}
-          onPrint={() => void handleConfirmCheckout()}
+          onPrint={() => undefined}
           onConfirmCheckout={handleConfirmCheckout}
           onClose={() => {
             setBillPreviewOpen(false);

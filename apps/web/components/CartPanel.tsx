@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCartStore } from "../lib/cart-store";
 import { calculateCart } from "../lib/cart-calculations";
 
@@ -16,9 +16,13 @@ export function CartPanel({
   const { items, removeItem, updateItem, clearCart } = useCartStore();
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const summary = calculateCart(items);
+  const lineMap = useMemo(
+    () => new Map(summary.lines.map((line) => [line.productId, line])),
+    [summary.lines]
+  );
 
   // A basic hash function to get a consistent image from Unsplash based on product name/id
-  const getProductImage = (name: string, seed: string) => {
+  const getProductImage = (name: string) => {
     // We'll use a placeholder for now since we don't have images in the DB
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e9e1d7&color=67625a&size=128`;
   };
@@ -57,14 +61,17 @@ export function CartPanel({
           {/* Cart Items */}
           <div className="mb-6 max-h-[42vh] flex-1 space-y-4 overflow-y-auto pr-1 md:mb-8 md:max-h-[50vh] md:space-y-6">
             {items.map((item) => (
-              <div
-                key={item.productId}
-                className="group rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-3 sm:flex sm:gap-3 md:gap-4"
-              >
+              <div key={item.productId} className="group rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-3 md:gap-4">
+                {(() => {
+                  const line = lineMap.get(item.productId);
+
+                  return (
+                    <>
+                      <div className="sm:flex sm:gap-3">
                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-surface-container-low flex-shrink-0 overflow-hidden ring-1 ring-outline-variant/20">
                   <img
                     alt={item.name}
-                    src={getProductImage(item.name, item.productId)}
+                    src={getProductImage(item.name)}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -109,6 +116,112 @@ export function CartPanel({
                     </div>
                   )}
                 </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                        <label className="rounded-2xl bg-white/70 p-3">
+                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
+                            Price
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-secondary">Rs</span>
+                            <input
+                              className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={item.price}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.productId,
+                                  "price",
+                                  parseFloat(event.target.value) || 0
+                                )
+                              }
+                            />
+                          </div>
+                        </label>
+
+                        <div className="rounded-2xl bg-white/70 p-3">
+                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
+                            Discount
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] ${
+                                item.discountPercent === 10
+                                  ? "bg-primary text-on-primary"
+                                  : "bg-primary-fixed text-on-primary-fixed"
+                              }`}
+                              onClick={() =>
+                                updateItem(
+                                  item.productId,
+                                  "discountPercent",
+                                  item.discountPercent === 10 ? 0 : 10
+                                )
+                              }
+                            >
+                              10%
+                            </button>
+                            <input
+                              className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="0.01"
+                              value={item.discountPercent}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.productId,
+                                  "discountPercent",
+                                  parseFloat(event.target.value) || 0
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        <label className="rounded-2xl bg-white/70 p-3">
+                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
+                            Tax %
+                          </span>
+                          <input
+                            className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            value={item.taxPercent}
+                            onChange={(event) =>
+                              updateItem(
+                                item.productId,
+                                "taxPercent",
+                                parseFloat(event.target.value) || 0
+                              )
+                            }
+                          />
+                        </label>
+
+                        <div className="rounded-2xl bg-primary/5 p-3">
+                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
+                            Line total
+                          </span>
+                          <div className="text-right">
+                            <div className="font-headline text-lg font-bold text-on-background">
+                              Rs {line?.total.toFixed(2) ?? "0.00"}
+                            </div>
+                            {line && line.discountAmount > 0 ? (
+                              <div className="text-[10px] text-emerald-700">
+                                Saved Rs {line.discountAmount.toFixed(2)}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

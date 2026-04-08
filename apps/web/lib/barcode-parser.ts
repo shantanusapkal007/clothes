@@ -22,6 +22,12 @@ export interface BarcodeData {
 export function parseBarcodeData(scannedText: string): BarcodeData {
   const trimmed = scannedText.trim();
 
+  const normalized = trimmed.replace(/[;\n\r\t]+/g, "|");
+
+  if (normalized !== trimmed) {
+    return parseBarcodeData(normalized);
+  }
+
   // Try pipe-separated format first
   if (trimmed.includes("|")) {
     return parsePipeFormat(trimmed);
@@ -30,6 +36,15 @@ export function parseBarcodeData(scannedText: string): BarcodeData {
   // Try colon-separated format
   if (trimmed.includes(":")) {
     return parseColonFormat(trimmed);
+  }
+
+  // Support whitespace-separated scanner payloads like:
+  // "123456789 299.00 10 2"
+  if (/\s+/.test(trimmed)) {
+    const compact = trimmed.split(/\s+/).filter(Boolean);
+    if (compact.length > 1) {
+      return parsePipeFormat(compact.join("|"));
+    }
   }
 
   // Plain barcode (no price/discount embedded)
