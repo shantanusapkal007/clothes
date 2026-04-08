@@ -26,14 +26,14 @@ export function ProductGrid({
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
       {products.map((product) => (
         <div
           key={product.id}
-          className="group cursor-pointer flex flex-col"
+          className="group flex cursor-pointer flex-col"
           onClick={() => onAdd(product)}
         >
-          <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-surface-container-low transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-lg relative ring-1 ring-outline-variant/20">
+          <div className="relative mb-2 aspect-[3/4] overflow-hidden rounded-2xl bg-surface-container-low ring-1 ring-outline-variant/20 transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-lg md:mb-3">
             {product.stock <= product.minStock && (
               <span className="absolute top-2 right-2 bg-error-container text-error text-[10px] font-bold px-2 py-1 rounded-full z-10 shadow-sm">
                 Low Stock
@@ -52,14 +52,14 @@ export function ProductGrid({
             </div>
           </div>
           <div className="px-1">
-            <h4 className="font-medium text-on-background text-sm md:text-base leading-tight md:truncate line-clamp-2 md:line-clamp-none mb-1">
+            <h4 className="mb-1 line-clamp-2 text-sm font-medium leading-tight text-on-background md:text-base">
               {product.name}
             </h4>
             <div className="flex justify-between items-center">
               <p className="text-primary font-headline font-bold text-sm md:text-base">
                 Rs {product.price.toFixed(2)}
               </p>
-              <p className="text-[10px] text-secondary tracking-widest hidden sm:block">
+              <p className="hidden text-[10px] tracking-widest text-secondary sm:block">
                 QTY: {product.stock}
               </p>
             </div>

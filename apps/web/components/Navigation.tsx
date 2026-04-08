@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const navItems = [
     { name: "Sales", href: "/" as const, icon: "payments" },
@@ -15,9 +19,11 @@ export function Navigation() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-[#fbf9f5]/90 backdrop-blur-md shadow-sm">
-        <div className="flex items-center gap-4 md:gap-12">
-          <h1 className="text-xl md:text-2xl font-serif tracking-tight text-[#774420]">FRIENDS</h1>
+      <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center justify-between border-b border-[#e9e1d7] bg-[#fbf9f5]/90 px-3 shadow-sm backdrop-blur-md sm:px-4 md:px-8">
+        <div className="flex min-w-0 items-center gap-3 md:gap-12">
+          <h1 className="truncate text-lg font-serif tracking-tight text-[#774420] sm:text-xl md:text-2xl">
+            FRIENDS
+          </h1>
           <nav className="hidden md:flex items-center gap-8 h-16">
             <Link 
               href="/" 
@@ -37,14 +43,14 @@ export function Navigation() {
             </Link>
           </nav>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <button className="material-symbols-outlined p-2 text-[#67625a] hover:text-[#774420] transition-colors cursor-pointer active:opacity-70">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+          <button className="hidden sm:inline-flex material-symbols-outlined p-2 text-[#67625a] hover:text-[#774420] transition-colors cursor-pointer active:opacity-70">
             notifications
           </button>
-          <button className="material-symbols-outlined p-2 text-[#67625a] hover:text-[#774420] transition-colors cursor-pointer active:opacity-70">
+          <button className="hidden sm:inline-flex material-symbols-outlined p-2 text-[#67625a] hover:text-[#774420] transition-colors cursor-pointer active:opacity-70">
             settings
           </button>
-          <div className="w-8 h-8 rounded-full overflow-hidden ml-2 ring-2 ring-primary-fixed cursor-pointer">
+          <div className="ml-1 hidden h-8 w-8 cursor-pointer overflow-hidden rounded-full ring-2 ring-primary-fixed sm:block">
             <img
               alt="Manager Profile"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Dkd6HkJ0s18H_Aod9frXDryOaLvEzlHK4e7Xo2sXhWglcvhuAjUgYTCzZmeu_KOR3Ur9AOqM6Mg6oNR3-YkRgC1_LxPzHa57E1nOvVx4Xcj_8r7zGHDtY-y4mPj87ZwJVQbknqKJadv4dYfpmyEa6Sdw95BAz7WQfycMzshLP8dm9BlEkXFF9SagKgdoj-EtfCVT9RbHOevLF5RXXP0GNCuz5dmZ8g68AskiDwrSAqHuXP2w7qP7DmI9SUzzWcCiaW9b53Q_jog"
@@ -53,8 +59,9 @@ export function Navigation() {
           </div>
           {/* Mobile menu button */}
           <button 
-            className="md:hidden material-symbols-outlined p-2 text-[#67625a] hover:text-[#774420] transition-colors cursor-pointer active:opacity-70"
+            className="material-symbols-outlined inline-flex rounded-full p-2 text-[#67625a] transition-colors cursor-pointer active:opacity-70 hover:text-[#774420] md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {mobileMenuOpen ? "close" : "menu"}
           </button>
@@ -63,15 +70,14 @@ export function Navigation() {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="fixed top-16 left-0 w-full bg-[#f7f1e7] shadow-lg z-40 md:hidden flex flex-col p-4 border-b border-[#e9e1d7]">
+        <div className="fixed left-0 top-16 z-40 flex w-full flex-col border-b border-[#e9e1d7] bg-[#f7f1e7]/95 p-3 shadow-lg backdrop-blur md:hidden">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link 
                 key={item.name}
                 href={item.href} 
-                onClick={() => setMobileMenuOpen(false)}
-                className={`py-3 px-6 flex items-center gap-3 rounded-xl mb-2 transition-colors ${
+                className={`mb-2 flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors ${
                   isActive ? "bg-[#ffdbc8] text-[#774420] font-bold" : "text-[#67625a] hover:bg-[#e9e1d7]/50"
                 }`}
               >

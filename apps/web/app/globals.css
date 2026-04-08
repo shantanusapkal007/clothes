@@ -3,9 +3,130 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-on-background min-h-screen selection:bg-primary-fixed;
     background: linear-gradient(135deg, #f7f1e7 0%, #f1e5d4 100%);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .ops-strip {
+    @apply mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3 md:mb-8 md:gap-4;
+  }
+
+  .ops-card {
+    @apply rounded-2xl border border-outline-variant/20 bg-[rgba(255,251,245,0.9)] px-4 py-4 shadow-sm backdrop-blur sm:px-5;
+  }
+
+  .ops-label {
+    @apply block text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container/80;
+  }
+
+  .ops-help {
+    @apply mt-1 block text-xs text-on-secondary-container;
+  }
+
+  .workspace-grid {
+    @apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)] xl:items-start xl:gap-8;
+  }
+
+  .workspace-left {
+    @apply min-w-0 space-y-4 md:space-y-6;
+  }
+
+  .workspace-right {
+    @apply min-w-0 space-y-4 md:space-y-6;
+  }
+
+  .panel {
+    @apply rounded-[28px] border border-outline-variant/20 bg-[rgba(255,255,255,0.82)] p-4 shadow-sm backdrop-blur md:p-6;
+  }
+
+  .panel-heading {
+    @apply mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .panel-heading h2 {
+    @apply font-headline text-xl font-bold text-on-background md:text-2xl;
+  }
+
+  .eyebrow {
+    @apply mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container;
+  }
+
+  .text-input {
+    @apply w-full rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-sm transition focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+  }
+
+  .panel-options {
+    @apply flex flex-col gap-3 sm:flex-row sm:justify-end;
+  }
+
+  .button {
+    @apply inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .button-small {
+    @apply min-h-11 px-4 py-2.5 text-xs uppercase tracking-[0.18em] md:text-sm md:tracking-[0.12em];
+  }
+
+  .button-primary {
+    @apply bg-primary text-on-primary shadow-lg shadow-primary/15 hover:bg-primary-container;
+  }
+
+  .button-secondary {
+    @apply border border-outline-variant/40 bg-surface-container-low text-on-surface hover:bg-surface-container-high;
+  }
+
+  .button-ghost {
+    @apply bg-transparent text-on-secondary-container hover:bg-surface-container-high hover:text-primary;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em];
+  }
+
+  .badge-muted {
+    @apply bg-surface-container-high text-on-secondary-container;
+  }
+
+  .success-text {
+    @apply mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm;
+  }
+
+  .error-card {
+    @apply mt-4 flex flex-col gap-3 rounded-3xl border border-error/15 bg-error-container/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .error-text {
+    @apply text-sm font-medium text-error;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#311300]/60 p-3 backdrop-blur-sm sm:items-center sm:p-4;
+  }
+
+  .modal-card {
+    @apply max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-outline-variant/20 bg-surface-container-low p-4 shadow-[0_40px_80px_rgba(49,19,0,0.18)] sm:p-6 md:p-8;
+  }
+
+  .inventory-form {
+    @apply space-y-4;
+  }
+
+  .inventory-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2;
   }
 }
 
@@ -13,6 +134,15 @@
   .glass-panel {
     background: rgba(255, 251, 245, 0.92);
     backdrop-filter: blur(10px);
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 
   .material-symbols-outlined {

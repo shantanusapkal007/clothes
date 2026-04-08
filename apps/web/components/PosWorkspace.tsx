@@ -260,6 +260,7 @@ export function PosWorkspace() {
               Refresh
             </button>
           </div>
+
           <CartPanel
             onCheckout={handleCheckout}
             checkoutPending={checkoutPending}

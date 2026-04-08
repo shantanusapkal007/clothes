@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useCartStore } from "../lib/cart-store";
 import { calculateCart } from "../lib/cart-calculations";
 
@@ -13,6 +14,7 @@ export function CartPanel({
   onOpenPrinterSettings
 }: CartPanelProps) {
   const { items, removeItem, updateItem, clearCart } = useCartStore();
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const summary = calculateCart(items);
 
   // A basic hash function to get a consistent image from Unsplash based on product name/id
@@ -22,7 +24,7 @@ export function CartPanel({
   };
 
   return (
-    <div className="glass-panel p-6 md:p-8 rounded-lg h-full flex flex-col sticky top-24 shadow-sm border border-outline-variant/20">
+    <div className="glass-panel flex h-full flex-col rounded-[28px] border border-outline-variant/20 p-4 shadow-sm md:p-6 xl:sticky xl:top-24">
       <div className="flex justify-between items-center mb-6 md:mb-8">
         <h3 className="font-headline text-xl md:text-2xl font-bold flex items-center gap-2">
           Checkout
@@ -53,9 +55,12 @@ export function CartPanel({
       ) : (
         <>
           {/* Cart Items */}
-          <div className="flex-1 space-y-4 md:space-y-6 overflow-y-auto mb-6 md:mb-8 pr-2 max-h-[40vh] md:max-h-[50vh]">
+          <div className="mb-6 max-h-[42vh] flex-1 space-y-4 overflow-y-auto pr-1 md:mb-8 md:max-h-[50vh] md:space-y-6">
             {items.map((item) => (
-              <div key={item.productId} className="flex gap-3 md:gap-4 group">
+              <div
+                key={item.productId}
+                className="group rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-3 sm:flex sm:gap-3 md:gap-4"
+              >
                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-surface-container-low flex-shrink-0 overflow-hidden ring-1 ring-outline-variant/20">
                   <img
                     alt={item.name}
@@ -63,15 +68,15 @@ export function CartPanel({
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="mt-3 min-w-0 flex-1 sm:mt-0">
                   <div className="flex justify-between gap-2">
                     <h5 className="font-semibold text-on-background truncate text-sm md:text-base">{item.name}</h5>
                     <p className="font-headline font-bold text-sm md:text-base shrink-0">
                       Rs {(item.price).toFixed(2)}
                     </p>
                   </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <p className="text-[10px] md:text-xs text-secondary font-medium uppercase tracking-widest truncate">
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="truncate text-[10px] font-medium uppercase tracking-widest text-secondary md:text-xs">
                       {item.barcode ? `SKU: ${item.barcode}` : 'NO SKU'}
                     </p>
                     <div className="flex items-center gap-2 md:gap-3 bg-surface-container-low p-1 rounded-full ring-1 ring-outline-variant/20">
@@ -111,19 +116,17 @@ export function CartPanel({
           {/* Payment & Checkout */}
           <div className="pt-6 md:pt-8 border-t border-outline-variant/30 space-y-4 md:space-y-6">
             <div className="flex flex-col gap-3 md:gap-4">
-              <div className="flex justify-between items-center p-3 md:p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/20">
-                <span className="text-on-secondary-container font-medium text-sm md:text-base">Payment Method</span>
-                <div className="flex bg-surface-container-high rounded-full p-1 overflow-x-auto max-w-[50%] md:max-w-none hide-scrollbar">
+              <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-3 md:p-4">
+                <span className="text-sm font-medium text-on-secondary-container md:text-base">Payment Method</span>
+                <div className="hide-scrollbar flex overflow-x-auto rounded-full bg-surface-container-high p-1">
                   {["cash", "card", "upi"].map((method) => (
                     <button
                       key={method}
-                      onClick={(e) => {
-                        e.currentTarget.parentElement?.querySelector('.bg-primary-fixed')?.classList.remove('bg-primary-fixed', 'text-on-primary-fixed');
-                        e.currentTarget.classList.add('bg-primary-fixed', 'text-on-primary-fixed');
-                        // In a real app we'd lift this state or handle it on click submit
-                      }}
-                      className={`px-3 md:px-4 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase ${
-                        method === 'cash' ? 'bg-primary-fixed text-on-primary-fixed' : 'text-on-secondary-container'
+                      onClick={() => setPaymentMethod(method)}
+                      className={`min-w-[72px] rounded-full px-3 py-2 text-[10px] font-bold uppercase md:px-4 md:text-xs ${
+                        paymentMethod === method
+                          ? 'bg-primary-fixed text-on-primary-fixed'
+                          : 'text-on-secondary-container'
                       }`}
                     >
                       {method}
@@ -153,12 +156,7 @@ export function CartPanel({
             </div>
             
             <button
-              onClick={() => {
-                // Find selected payment method. Hacky for now, ideally derived from state.
-                const btn = document.querySelector('.bg-primary-fixed');
-                const method = btn ? btn.textContent?.toLowerCase() || 'cash' : 'cash';
-                onCheckout(method);
-              }}
+              onClick={() => onCheckout(paymentMethod)}
               disabled={checkoutPending}
               className="w-full bg-primary text-on-primary py-4 md:py-6 rounded-xl text-lg md:text-xl font-bold hover:bg-primary-container transition-all active:scale-[0.98] shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
             >

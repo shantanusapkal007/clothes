@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { prisma } from "../../../../lib/prisma";
 import { mapBill } from "../../../../lib/server-mappers";
 
@@ -16,6 +17,7 @@ export async function GET(
   }
 ) {
   try {
+    assertDatabaseConfig();
     const params = paramsSchema.parse(await context.params);
     const bill = await prisma.bill.findUnique({
       where: {

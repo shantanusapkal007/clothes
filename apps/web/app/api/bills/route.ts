@@ -2,6 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateCheckout } from "../../../lib/billing";
+import { assertDatabaseConfig } from "../../../lib/database-url";
 import { prisma } from "../../../lib/prisma";
 import { mapBill } from "../../../lib/server-mappers";
 
@@ -24,6 +25,7 @@ const checkoutSchema = z.object({
 
 export async function GET() {
   try {
+    assertDatabaseConfig();
     const bills = await prisma.bill.findMany({
       include: {
         items: true
@@ -42,6 +44,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    assertDatabaseConfig();
     const body = checkoutSchema.parse(await request.json());
     const productIds = body.items.map((item) => item.productId);
     const products = await prisma.product.findMany({

@@ -85,7 +85,7 @@ export function CreateProductModal({
             <p className="eyebrow">New product</p>
             <h2>Create scanned item</h2>
           </div>
-          <button className="button button-ghost" type="button" onClick={onClose}>
+          <button className="button button-ghost self-start sm:self-auto" type="button" onClick={onClose}>
             Close
           </button>
         </div>
@@ -177,7 +177,7 @@ export function CreateProductModal({
             />
           </div>
           {error ? <p className="error-text">{error}</p> : null}
-          <button className="button button-primary" disabled={pending} type="submit">
+          <button className="button button-primary w-full" disabled={pending} type="submit">
             {pending ? "Creating..." : "Create product"}
           </button>
         </form>

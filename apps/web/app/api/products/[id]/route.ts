@@ -1,6 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { prisma } from "../../../../lib/prisma";
 import { mapProduct } from "../../../../lib/server-mappers";
 
@@ -31,6 +32,7 @@ export async function PUT(
   }
 ) {
   try {
+    assertDatabaseConfig();
     const params = paramsSchema.parse(await context.params);
     const body = updateSchema.parse(await request.json());
 
@@ -64,6 +66,7 @@ export async function DELETE(
   }
 ) {
   try {
+    assertDatabaseConfig();
     const params = paramsSchema.parse(await context.params);
     await prisma.product.delete({
       where: {

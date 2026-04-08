@@ -1,6 +1,4 @@
-import { getBillLayoutConfig, DEFAULT_BILL_LAYOUT, type BillLayoutConfig } from "../lib/printer";
-import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
-import type { Product } from "../types";
+import { getBillLayoutConfig, DEFAULT_BILL_LAYOUT } from "../lib/printer";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -24,15 +22,9 @@ export function BillPrintPreview({
 }: BillPrintPreviewProps) {
   const layout = getBillLayoutConfig();
 
-  const handlePrint = () => {
-    // Legacy support logic is abstracted in printData, 
-    // but the main confirm checkout is primary here.
-    onPrint();
-  };
-
   return (
     <div className="fixed inset-0 bg-[#311300]/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm max-h-[90vh] bg-surface-container-lowest rounded-3xl shadow-[0_40px_80px_rgba(49,19,0,0.2)] flex flex-col border border-outline-variant/30 overflow-hidden relative">
+      <div className="relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest shadow-[0_40px_80px_rgba(49,19,0,0.2)] sm:max-w-md">
         
         {/* Receipt Header Style Element Component */}
         <div className="h-6 bg-surface-container-lowest relative flex gap-2 justify-center pt-2 -mb-2 overflow-hidden">
@@ -55,7 +47,7 @@ export function BillPrintPreview({
         </div>
 
         {/* The Receipt content */}
-        <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 font-mono text-xs md:text-sm text-stone-800 flex flex-col hide-scrollbar">
+        <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto px-4 py-5 font-mono text-xs text-stone-800 sm:px-6 md:px-8 md:py-6 md:text-sm">
           
           <div className="text-center mb-6">
              <h2 className="font-serif text-2xl font-bold text-stone-900 mb-1 leading-tight tracking-tight">
@@ -81,7 +73,7 @@ export function BillPrintPreview({
           </div>
 
           <div className="flex-1">
-             <table className="w-full mb-4">
+             <table className="mb-4 w-full">
                <thead>
                  <tr className="border-b border-stone-200 text-left text-[10px] uppercase opacity-70">
                    <th className="pb-2 font-normal">Item</th>
@@ -93,7 +85,7 @@ export function BillPrintPreview({
                   {(bill.items as any)?.map((item: any, idx: number) => (
                     <tr key={idx}>
                       <td className="py-3 pr-2">
-                        <div className="font-bold truncate max-w-[120px]">{item.productName}</div>
+                        <div className="max-w-[120px] truncate font-bold sm:max-w-[160px]">{item.productName}</div>
                         {layout.showItemDetails && (
                            <div className="text-[9px] opacity-70 mt-1 uppercase">
                              {item.discountPercent > 0 && <span>Disc -{item.discountPercent}% </span>}
@@ -139,7 +131,7 @@ export function BillPrintPreview({
              <div className="flex justify-between items-end mt-4">
                <span className="font-bold uppercase text-stone-500 text-sm">Total</span>
                <span className="font-serif text-2xl font-bold text-stone-900 leading-none">
-                 $ {bill.finalAmount.toFixed(2)}
+                 Rs {bill.finalAmount.toFixed(2)}
                </span>
              </div>
           </div>
@@ -156,7 +148,10 @@ export function BillPrintPreview({
         {/* Actions Footer */}
         <div className="p-4 bg-surface-container-high border-t border-outline-variant/30 flex flex-col gap-3 shrink-0 rounded-b-3xl">
            <button 
-             onClick={() => onConfirmCheckout()}
+             onClick={() => {
+               onPrint();
+               onConfirmCheckout();
+             }}
              disabled={confirmPending}
              className="w-full py-4 rounded-xl font-bold bg-primary text-on-primary flex items-center justify-center gap-2 shadow-md hover:bg-primary-container transition-all disabled:opacity-70 active:scale-[0.98]"
            >

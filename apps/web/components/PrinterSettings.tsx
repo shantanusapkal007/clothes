@@ -167,7 +167,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
 
   return (
     <div className="fixed inset-0 bg-[#311300]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-surface-container-low w-full max-w-4xl max-h-[95vh] rounded-3xl shadow-[0_40px_80px_rgba(49,19,0,0.15)] overflow-hidden flex flex-col ring-1 ring-outline-variant/30">
+      <div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-surface-container-low shadow-[0_40px_80px_rgba(49,19,0,0.15)] ring-1 ring-outline-variant/30">
         
         {/* Header */}
         <div className="px-6 md:px-10 pt-8 pb-6 border-b border-outline-variant/20 bg-surface-container-lowest">
@@ -185,15 +185,15 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
             </button>
           </div>
           
-          <div className="flex gap-2 mt-6 p-1.5 bg-surface-container-high w-fit rounded-full ring-1 ring-outline-variant/20">
+          <div className="mt-6 flex w-full gap-2 overflow-x-auto rounded-full bg-surface-container-high p-1.5 ring-1 ring-outline-variant/20 sm:w-fit">
             <button 
-              className={`px-6 md:px-8 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all ${activeTab === 'printer' ? 'bg-primary text-on-primary shadow-md' : 'text-on-secondary-container hover:bg-surface-container-highest'}`}
+              className={`flex-1 whitespace-nowrap px-4 py-2 md:px-8 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all ${activeTab === 'printer' ? 'bg-primary text-on-primary shadow-md' : 'text-on-secondary-container hover:bg-surface-container-highest'}`}
               onClick={() => setActiveTab('printer')}
             >
               Printer Setup
             </button>
             <button 
-              className={`px-6 md:px-8 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all ${activeTab === 'layout' ? 'bg-primary text-on-primary shadow-md' : 'text-on-secondary-container hover:bg-surface-container-highest'}`}
+              className={`flex-1 whitespace-nowrap px-4 py-2 md:px-8 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all ${activeTab === 'layout' ? 'bg-primary text-on-primary shadow-md' : 'text-on-secondary-container hover:bg-surface-container-highest'}`}
               onClick={() => setActiveTab('layout')}
             >
               Bill Layout
@@ -285,7 +285,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-bold text-on-surface-variant mb-2 ml-1 uppercase tracking-wider">Paper Width</label>
                       <select 
@@ -463,7 +463,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
         </div>
 
         {/* Modal Footer */}
-        <div className="pl-6 px-6 md:px-10 py-6 md:py-8 bg-surface-container-highest border-t border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 md:gap-6 mt-auto">
+        <div className="px-6 py-6 md:px-10 md:py-8 bg-surface-container-highest border-t border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 md:gap-6 mt-auto">
           {activeTab === 'printer' ? (
             <>
               <button 

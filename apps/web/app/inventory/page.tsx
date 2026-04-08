@@ -2,10 +2,10 @@ import { InventoryManager } from "../../components/InventoryManager";
 
 export default function InventoryPage() {
   return (
-    <main className="ml-0 md:ml-64 pt-16 md:pt-24 px-4 md:px-8 pb-12 min-h-screen">
+    <main className="min-h-screen px-3 pb-10 pt-20 sm:px-4 md:ml-64 md:px-8 md:pb-12 md:pt-24">
       <div className="max-w-6xl mx-auto">
         {/* Hero Banner */}
-        <header className="relative overflow-hidden rounded-xl bg-primary-container p-8 md:p-12 mb-8 md:mb-12 flex flex-col justify-end min-h-[200px] md:min-h-[320px] shadow-lg">
+        <header className="relative mb-6 flex min-h-[180px] flex-col justify-end overflow-hidden rounded-[28px] bg-primary-container p-5 shadow-lg sm:p-8 md:mb-12 md:min-h-[320px] md:p-12">
           <div className="absolute inset-0 z-0">
             <img
               alt="Boutique Interior"
@@ -19,7 +19,7 @@ export default function InventoryPage() {
             <span className="text-on-primary-container/80 font-bold tracking-[0.2em] text-xs md:text-sm mb-2 block uppercase">
               BACK OFFICE
             </span>
-            <h1 className="text-3xl md:text-5xl font-serif text-on-primary-container max-w-xl leading-tight">
+            <h1 className="max-w-xl text-2xl leading-tight text-on-primary-container sm:text-3xl md:text-5xl font-serif">
               Inventory that stays fast under pressure.
             </h1>
           </div>

@@ -17,8 +17,8 @@ export function ScannerPanel({
   };
 
   return (
-    <div className="glass-panel p-6 md:p-8 rounded-lg shadow-sm">
-      <form onSubmit={handleSubmit} className="flex items-center gap-4">
+    <div className="glass-panel rounded-[28px] p-4 shadow-sm md:p-6">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex-1 relative">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm md:text-base">
             barcode_scanner
@@ -35,7 +35,7 @@ export function ScannerPanel({
         </div>
         <button
           type="button"
-          className="bg-primary text-on-primary w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center hover:bg-primary-container transition-all active:scale-95 shadow-lg shrink-0"
+          className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-on-primary shadow-lg transition-all active:scale-95 hover:bg-primary-container sm:h-14 sm:w-14 sm:rounded-lg shrink-0"
           title="Open Camera Scanner"
         >
           <span className="material-symbols-outlined" data-weight="fill">

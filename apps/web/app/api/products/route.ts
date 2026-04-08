@@ -1,6 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { assertDatabaseConfig } from "../../../lib/database-url";
 import { prisma } from "../../../lib/prisma";
 import { mapProduct } from "../../../lib/server-mappers";
 
@@ -20,6 +21,7 @@ const productSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    assertDatabaseConfig();
     const search = request.nextUrl.searchParams.get("search")?.trim();
 
     const products = await prisma.product.findMany({
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    assertDatabaseConfig();
     const body = productSchema.parse(await request.json());
     const product = await prisma.product.create({
       data: {
