@@ -12,7 +12,7 @@ export interface PrinterConfig {
   vendorId?: string;
   productId?: string;
   bluetoothDeviceId?: string;
-  width: number; // in mm, typically 80 or 58
+  width: number;
   connected: boolean;
 }
 
@@ -27,25 +27,71 @@ export interface BillLayoutConfig {
   footerText?: string;
   itemsPerLine: number;
   fontSize: "small" | "medium" | "large";
-  paperWidth: number; // in mm
-  marginLeft: number; // in mm
-  marginRight: number; // in mm
+  paperWidth: number;
+  marginLeft: number;
+  marginRight: number;
 }
 
-// Default printer configuration
+export interface PrintableBillItem {
+  productName: string;
+  quantity: number;
+  price: number;
+  total: number;
+  discountPercent: number;
+  taxPercent: number;
+}
+
+export interface PrintableBillData {
+  items: PrintableBillItem[];
+  totalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  finalAmount: number;
+  paymentMethod: string;
+  createdAt?: string;
+}
+
+export type PrintTransportResult = "device" | "browser" | "failed";
+
+const PRINTER_STORAGE_KEY = "printer-config";
+const BILL_LAYOUT_STORAGE_KEY = "bill-layout-config";
+
+const USB_REQUEST_FILTERS = [
+  { classCode: 0x07 },
+  { vendorId: 0x0416 },
+  { vendorId: 0x04b8 },
+  { vendorId: 0x0483 },
+  { vendorId: 0x0fe6 }
+];
+
+const BT_PRINTER_SERVICE_UUIDS = [
+  "000018f0-0000-1000-8000-00805f9b34fb",
+  "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
+  "49535343-fe7d-4ae5-8fa9-9fafd205e455"
+];
+
+const BT_PRINTER_CHAR_UUIDS = [
+  "00002af1-0000-1000-8000-00805f9b34fb",
+  "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f",
+  "49535343-8841-43f4-a8d4-ecbe34729bb3"
+];
+
+let bluetoothDevice: any = null;
+let bluetoothCharacteristic: any = null;
+
 export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
-  name: "Default Thermal Printer",
+  name: "Thermal Printer",
   connectionType: "none",
   width: 80,
   connected: false
 };
 
-// Default bill layout configuration  
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
   companyName: "Friends Clothing",
   showItemDetails: true,
   showTaxBreakdown: true,
   showDiscountBreakdown: true,
+  footerText: "Thank you for shopping with us!",
   itemsPerLine: 48,
   fontSize: "medium",
   paperWidth: 80,
@@ -53,143 +99,310 @@ export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
   marginRight: 2
 };
 
-/**
- * Get printer config from localStorage
- */
+export const ESC_POS = {
+  INIT: "\x1b\x40",
+  BOLD_ON: "\x1b\x45\x01",
+  BOLD_OFF: "\x1b\x45\x00",
+  ALIGN_LEFT: "\x1b\x61\x00",
+  ALIGN_CENTER: "\x1b\x61\x01",
+  ALIGN_RIGHT: "\x1b\x61\x02",
+  SIZE_NORMAL: "\x1d\x21\x00",
+  SIZE_DOUBLE: "\x1d\x21\x11",
+  NEWLINE: "\x0a",
+  CUT_PAPER: "\x1d\x56\x42\x00",
+  FEED_LINES: (lines: number) => `\x1b\x64${String.fromCharCode(lines)}`
+};
+
+function getDefaultItemsPerLine(
+  paperWidth: number,
+  fontSize: BillLayoutConfig["fontSize"]
+): number {
+  if (paperWidth <= 58) {
+    return fontSize === "small" ? 34 : fontSize === "large" ? 24 : 28;
+  }
+
+  if (paperWidth >= 110) {
+    return fontSize === "small" ? 64 : fontSize === "large" ? 48 : 56;
+  }
+
+  return fontSize === "small" ? 52 : fontSize === "large" ? 36 : 48;
+}
+
+export function normalizeBillLayoutConfig(
+  config: Partial<BillLayoutConfig> = {}
+): BillLayoutConfig {
+  const fontSize = config.fontSize ?? DEFAULT_BILL_LAYOUT.fontSize;
+  const paperWidth = Number(config.paperWidth ?? DEFAULT_BILL_LAYOUT.paperWidth) || DEFAULT_BILL_LAYOUT.paperWidth;
+  const computedItemsPerLine = getDefaultItemsPerLine(paperWidth, fontSize);
+
+  return {
+    ...DEFAULT_BILL_LAYOUT,
+    ...config,
+    fontSize,
+    paperWidth,
+    itemsPerLine: Number(config.itemsPerLine ?? computedItemsPerLine) || computedItemsPerLine,
+    marginLeft: Math.max(0, Number(config.marginLeft ?? DEFAULT_BILL_LAYOUT.marginLeft) || 0),
+    marginRight: Math.max(0, Number(config.marginRight ?? DEFAULT_BILL_LAYOUT.marginRight) || 0)
+  };
+}
+
 export function getPrinterConfig(): PrinterConfig {
   if (typeof window === "undefined") {
     return DEFAULT_PRINTER_CONFIG;
   }
 
-  const stored = localStorage.getItem("printer-config");
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored) as PrinterConfig;
-      // Migrate old configs that don't have connectionType
-      if (!parsed.connectionType) {
-        parsed.connectionType = "none";
-      }
-      return parsed;
-    } catch {
-      return DEFAULT_PRINTER_CONFIG;
-    }
+  const stored = localStorage.getItem(PRINTER_STORAGE_KEY);
+  if (!stored) {
+    return DEFAULT_PRINTER_CONFIG;
   }
-  return DEFAULT_PRINTER_CONFIG;
+
+  try {
+    return {
+      ...DEFAULT_PRINTER_CONFIG,
+      ...(JSON.parse(stored) as Partial<PrinterConfig>)
+    };
+  } catch {
+    return DEFAULT_PRINTER_CONFIG;
+  }
 }
 
-/**
- * Save printer config to localStorage
- */
 export function savePrinterConfig(config: PrinterConfig): void {
   if (typeof window === "undefined") {
     return;
   }
-  localStorage.setItem("printer-config", JSON.stringify(config));
+
+  localStorage.setItem(
+    PRINTER_STORAGE_KEY,
+    JSON.stringify({
+      ...DEFAULT_PRINTER_CONFIG,
+      ...config
+    })
+  );
 }
 
-/**
- * Get bill layout config from localStorage
- */
 export function getBillLayoutConfig(): BillLayoutConfig {
   if (typeof window === "undefined") {
     return DEFAULT_BILL_LAYOUT;
   }
 
-  const stored = localStorage.getItem("bill-layout-config");
-  if (stored) {
-    try {
-      return { ...DEFAULT_BILL_LAYOUT, ...JSON.parse(stored) };
-    } catch {
-      return DEFAULT_BILL_LAYOUT;
-    }
+  const stored = localStorage.getItem(BILL_LAYOUT_STORAGE_KEY);
+  if (!stored) {
+    return DEFAULT_BILL_LAYOUT;
   }
-  return DEFAULT_BILL_LAYOUT;
+
+  try {
+    return normalizeBillLayoutConfig(JSON.parse(stored) as Partial<BillLayoutConfig>);
+  } catch {
+    return DEFAULT_BILL_LAYOUT;
+  }
 }
 
-/**
- * Save bill layout config to localStorage
- */
 export function saveBillLayoutConfig(config: Partial<BillLayoutConfig>): void {
   if (typeof window === "undefined") {
     return;
   }
 
   const current = getBillLayoutConfig();
-  const updated = { ...current, ...config };
-  localStorage.setItem("bill-layout-config", JSON.stringify(updated));
+  const updated = normalizeBillLayoutConfig({ ...current, ...config });
+  localStorage.setItem(BILL_LAYOUT_STORAGE_KEY, JSON.stringify(updated));
 }
 
-/**
- * ESC/POS Commands for thermal printer
- */
-export const ESC_POS = {
-  // Control
-  INIT: "\x1b\x40", // Initialize printer
-  RESET: "\x1b\x3f\x05", // Soft reset
-  
-  // Text formatting
-  BOLD_ON: "\x1b\x45\x01",
-  BOLD_OFF: "\x1b\x45\x00",
-  UNDERLINE_ON: "\x1b\x2d\x01",
-  UNDERLINE_OFF: "\x1b\x2d\x00",
-  
-  // Character size
-  SIZE_1X: "\x1b\x21\x00",
-  SIZE_2X: "\x1b\x21\x01",
-  SIZE_2X_2H: "\x1b\x21\x11",
-  SIZE_2X_2W: "\x1b\x21\x20",
-  SIZE_2X_BOTH: "\x1b\x21\x30",
-  
-  // Alignment
-  ALIGN_LEFT: "\x1b\x61\x00",
-  ALIGN_CENTER: "\x1b\x61\x01",
-  ALIGN_RIGHT: "\x1b\x61\x02",
-  
-  // Line ending
-  NEWLINE: "\x0a",
-  
-  // Paper control
-  CUT_PAPER: "\x1d\x56\x42\x00", // Partial cut
-  FULL_CUT: "\x1d\x56\x41\x00", // Full cut
-  FEED_LINES: (lines: number) => `\x1b\x64${String.fromCharCode(lines)}`,
-  
-  // Open drawer
-  OPEN_DRAWER: "\x1b\x70\x00\x32\x32",
-};
+function formatAmount(value: number): string {
+  return `Rs ${value.toFixed(2)}`;
+}
 
-/**
- * Generate ESC/POS command string for bill content
- */
-export function generateEscPos(
-  lines: string[],
-  billLayout: BillLayoutConfig
-): string {
-  let commands = ESC_POS.INIT;
-  
-  // Set alignment and size
-  commands += ESC_POS.ALIGN_CENTER;
-  commands += ESC_POS.SIZE_1X;
-
-  // Add content
-  for (const line of lines) {
-    // Auto-truncate line if too long for paper width
-    const maxChars = billLayout.itemsPerLine;
-    const truncated = line.length > maxChars ? line.substring(0, maxChars) : line;
-    commands += truncated + ESC_POS.NEWLINE;
+function wrapText(text: string, width: number): string[] {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (!normalized) {
+    return [""];
   }
 
-  // Add feed and cut
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    if (!current) {
+      current = word;
+      continue;
+    }
+
+    if (`${current} ${word}`.length <= width) {
+      current = `${current} ${word}`;
+      continue;
+    }
+
+    lines.push(current);
+    current = word;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines.flatMap((line) => {
+    if (line.length <= width) {
+      return [line];
+    }
+
+    const chunks: string[] = [];
+    for (let index = 0; index < line.length; index += width) {
+      chunks.push(line.slice(index, index + width));
+    }
+    return chunks;
+  });
+}
+
+function padLine(left: string, right: string, width: number): string {
+  const safeLeft = left.trim();
+  const safeRight = right.trim();
+  const remaining = width - safeLeft.length - safeRight.length;
+
+  if (remaining >= 1) {
+    return `${safeLeft}${" ".repeat(remaining)}${safeRight}`;
+  }
+
+  const leftSpace = Math.max(4, width - safeRight.length - 1);
+  const clippedLeft = safeLeft.slice(0, leftSpace);
+  const padding = Math.max(1, width - clippedLeft.length - safeRight.length);
+  return `${clippedLeft}${" ".repeat(padding)}${safeRight}`;
+}
+
+function centerText(text: string, width: number): string {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length >= width) {
+    return trimmed.slice(0, width);
+  }
+
+  const leftPadding = Math.floor((width - trimmed.length) / 2);
+  return `${" ".repeat(leftPadding)}${trimmed}`;
+}
+
+function getMarginCharacters(layout: BillLayoutConfig) {
+  return {
+    left: Math.round(layout.marginLeft / 2),
+    right: Math.round(layout.marginRight / 2)
+  };
+}
+
+function buildReceiptLines(
+  bill: PrintableBillData,
+  billNumber: string,
+  layout: BillLayoutConfig,
+  paymentMethod: string
+): string[] {
+  const { left, right } = getMarginCharacters(layout);
+  const receiptWidth = Math.max(24, layout.itemsPerLine - left - right);
+  const separator = "-".repeat(receiptWidth);
+  const lines: string[] = [];
+  const pushWrapped = (text: string, align: "left" | "center" = "left") => {
+    for (const line of wrapText(text, receiptWidth)) {
+      lines.push(align === "center" ? centerText(line, receiptWidth) : line);
+    }
+  };
+
+  pushWrapped(layout.companyName, "center");
+
+  if (layout.companyAddress) {
+    pushWrapped(layout.companyAddress, "center");
+  }
+
+  if (layout.companyPhone) {
+    pushWrapped(`Phone: ${layout.companyPhone}`, "center");
+  }
+
+  lines.push(separator);
+
+  const receiptDate = bill.createdAt
+    ? new Date(bill.createdAt)
+    : new Date();
+
+  lines.push(padLine("Bill", billNumber, receiptWidth));
+  lines.push(
+    padLine(
+      "Date",
+      receiptDate.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      }),
+      receiptWidth
+    )
+  );
+  lines.push(separator);
+  lines.push(padLine("Item", "Total", receiptWidth));
+  lines.push(separator);
+
+  for (const item of bill.items) {
+    for (const [index, line] of wrapText(item.productName, receiptWidth).entries()) {
+      lines.push(index === 0 ? line : `  ${line}`.slice(0, receiptWidth));
+    }
+
+    lines.push(
+      padLine(
+        `${item.quantity} x ${item.price.toFixed(2)}`,
+        item.total.toFixed(2),
+        receiptWidth
+      )
+    );
+
+    if (layout.showItemDetails && (item.discountPercent > 0 || item.taxPercent > 0)) {
+      const detailParts = [
+        item.discountPercent > 0 ? `Disc ${item.discountPercent}%` : "",
+        item.taxPercent > 0 ? `Tax ${item.taxPercent}%` : ""
+      ].filter(Boolean);
+      lines.push(detailParts.join(" | "));
+    }
+  }
+
+  lines.push(separator);
+  lines.push(padLine("Subtotal", formatAmount(bill.totalAmount), receiptWidth));
+
+  if (layout.showDiscountBreakdown && bill.discountAmount > 0) {
+    lines.push(padLine("Discount", `-${formatAmount(bill.discountAmount)}`, receiptWidth));
+  }
+
+  if (layout.showTaxBreakdown && bill.taxAmount > 0) {
+    lines.push(padLine("Tax", formatAmount(bill.taxAmount), receiptWidth));
+  }
+
+  lines.push(separator);
+  lines.push(padLine("TOTAL", formatAmount(bill.finalAmount), receiptWidth));
+  lines.push(padLine("Payment", paymentMethod.toUpperCase(), receiptWidth));
+  lines.push(separator);
+
+  if (layout.footerText) {
+    pushWrapped(layout.footerText, "center");
+  }
+
+  return lines.map((line) => `${" ".repeat(left)}${line.slice(0, receiptWidth)}${" ".repeat(right)}`);
+}
+
+export function buildReceiptText(
+  bill: PrintableBillData,
+  billNumber: string,
+  layout: BillLayoutConfig = getBillLayoutConfig(),
+  paymentMethod = bill.paymentMethod
+): string {
+  return buildReceiptLines(bill, billNumber, layout, paymentMethod).join("\n");
+}
+
+export function generateEscPos(lines: string[], billLayout: BillLayoutConfig): string {
+  let commands = ESC_POS.INIT;
+  commands += ESC_POS.ALIGN_LEFT;
+  commands += billLayout.fontSize === "large" ? ESC_POS.SIZE_DOUBLE : ESC_POS.SIZE_NORMAL;
+
+  for (const line of lines) {
+    commands += `${line}${ESC_POS.NEWLINE}`;
+  }
+
   commands += ESC_POS.FEED_LINES(4);
   commands += ESC_POS.CUT_PAPER;
-
   return commands;
 }
 
-// ─── USB Printer Functions ───────────────────────────────────────────────────
-
-/**
- * List available USB printers (requires appropriate browser/OS permissions)
- */
 export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
   if (typeof navigator === "undefined" || !("usb" in navigator)) {
     return [];
@@ -198,22 +411,19 @@ export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
   try {
     const devices = await (navigator as any).usb.getDevices();
     return devices.map((device: any) => ({
-      name: device.productName || `USB Printer (${device.productId})`,
-      connectionType: "usb" as ConnectionType,
+      name: device.productName || `USB Printer ${device.productId}`,
+      connectionType: "usb",
       deviceId: device.serialNumber,
-      vendorId: device.vendorId.toString(),
-      productId: device.productId.toString(),
+      vendorId: String(device.vendorId),
+      productId: String(device.productId),
       width: 80,
-      connected: false
+      connected: true
     }));
   } catch {
     return [];
   }
 }
 
-/**
- * Request USB printer from user
- */
 export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
   if (typeof navigator === "undefined" || !("usb" in navigator)) {
     return null;
@@ -221,19 +431,15 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
 
   try {
     const device = await (navigator as any).usb.requestDevice({
-      filters: [
-        { vendorId: 0x0416 }, // Zebra
-        { vendorId: 0x04b8 }, // Epson
-        { vendorId: 0x0fe6 }  // ILI
-      ]
+      filters: USB_REQUEST_FILTERS
     });
 
     return {
       name: device.productName || "Thermal Printer (USB)",
       connectionType: "usb",
       deviceId: device.serialNumber,
-      vendorId: device.vendorId.toString(),
-      productId: device.productId.toString(),
+      vendorId: String(device.vendorId),
+      productId: String(device.productId),
       width: 80,
       connected: true
     };
@@ -242,54 +448,45 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
   }
 }
 
-// ─── Bluetooth Printer Functions ─────────────────────────────────────────────
-
-/**
- * Common Bluetooth service UUIDs for ESC/POS thermal printers
- */
-const BT_PRINTER_SERVICE_UUIDS = [
-  "000018f0-0000-1000-8000-00805f9b34fb", // Common ESC/POS printers
-  "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // Generic serial
-  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // Microchip ISSC / many BT printers
-];
-
-const BT_PRINTER_CHAR_UUIDS = [
-  "00002af1-0000-1000-8000-00805f9b34fb", // Common write characteristic
-  "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f", // Generic serial write
-  "49535343-8841-43f4-a8d4-ecbe34729bb3", // ISSC write characteristic
-];
-
-// In-memory cache for active Bluetooth connection
-let _btDevice: any = null;
-let _btCharacteristic: any = null;
-
-/**
- * Check if Web Bluetooth is available
- */
 export function isBluetoothAvailable(): boolean {
   return typeof navigator !== "undefined" && "bluetooth" in navigator;
 }
 
-/**
- * Request a Bluetooth printer from the user via system picker
- */
+async function hydrateBluetoothDevice(config?: PrinterConfig): Promise<any> {
+  if (bluetoothDevice) {
+    return bluetoothDevice;
+  }
+
+  if (!config?.bluetoothDeviceId) {
+    return null;
+  }
+
+  const bluetoothNavigator = (navigator as any).bluetooth as {
+    getDevices?: () => Promise<any[]>;
+  };
+
+  if (typeof bluetoothNavigator.getDevices !== "function") {
+    return null;
+  }
+
+  const devices = await bluetoothNavigator.getDevices();
+  const matchedDevice = devices.find((device: any) => device.id === config.bluetoothDeviceId) ?? null;
+  bluetoothDevice = matchedDevice;
+  return matchedDevice;
+}
+
 export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
   if (!isBluetoothAvailable()) {
     return null;
   }
 
   try {
-    // Request device — use acceptAllDevices with optionalServices since
-    // many cheap thermal printers don't advertise standard service UUIDs
     const device = await (navigator as any).bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: BT_PRINTER_SERVICE_UUIDS
     });
 
-    if (!device) return null;
-
-    // Cache device reference
-    _btDevice = device;
+    bluetoothDevice = device;
 
     return {
       name: device.name || "Bluetooth Printer",
@@ -303,46 +500,41 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
   }
 }
 
-/**
- * Connect to a previously paired Bluetooth printer and discover the write characteristic
- */
-export async function connectBluetoothPrinter(): Promise<any> {
-  if (!_btDevice) return null;
+export async function connectBluetoothPrinter(config?: PrinterConfig) {
+  const device = (await hydrateBluetoothDevice(config)) ?? bluetoothDevice;
+  if (!device?.gatt) {
+    return null;
+  }
 
   try {
-    const server = await _btDevice.gatt!.connect();
+    const server = device.gatt.connected ? device.gatt : await device.gatt.connect();
 
-    // Try each known service UUID until we find a writable characteristic
     for (const serviceUuid of BT_PRINTER_SERVICE_UUIDS) {
       try {
         const service = await server.getPrimaryService(serviceUuid);
         const characteristics = await service.getCharacteristics();
+        const writableCharacteristic = characteristics.find(
+          (characteristic: any) =>
+            characteristic.properties.write || characteristic.properties.writeWithoutResponse
+        );
 
-        for (const char of characteristics) {
-          // Look for a writable characteristic
-          if (
-            char.properties.write ||
-            char.properties.writeWithoutResponse
-          ) {
-            _btCharacteristic = char;
-            return char;
-          }
+        if (writableCharacteristic) {
+          bluetoothCharacteristic = writableCharacteristic;
+          return writableCharacteristic;
         }
       } catch {
-        // This service UUID doesn't exist on the device, try next
         continue;
       }
     }
 
-    // Fallback: try known characteristic UUIDs directly
     const services = await server.getPrimaryServices();
     for (const service of services) {
-      for (const charUuid of BT_PRINTER_CHAR_UUIDS) {
+      for (const characteristicUuid of BT_PRINTER_CHAR_UUIDS) {
         try {
-          const char = await service.getCharacteristic(charUuid);
-          if (char.properties.write || char.properties.writeWithoutResponse) {
-            _btCharacteristic = char;
-            return char;
+          const characteristic = await service.getCharacteristic(characteristicUuid);
+          if (characteristic.properties.write || characteristic.properties.writeWithoutResponse) {
+            bluetoothCharacteristic = characteristic;
+            return characteristic;
           }
         } catch {
           continue;
@@ -356,27 +548,26 @@ export async function connectBluetoothPrinter(): Promise<any> {
   }
 }
 
-/**
- * Send raw data to the connected Bluetooth printer
- * Splits data into chunks to respect BLE MTU limits (typically 512 bytes max)
- */
-export async function sendBluetoothData(data: Uint8Array): Promise<boolean> {
-  if (!_btCharacteristic) {
-    // Try to reconnect
-    const char = await connectBluetoothPrinter();
-    if (!char) return false;
+export async function sendBluetoothData(
+  data: Uint8Array,
+  config?: PrinterConfig
+): Promise<boolean> {
+  if (!bluetoothCharacteristic) {
+    const characteristic = await connectBluetoothPrinter(config);
+    if (!characteristic) {
+      return false;
+    }
   }
 
   try {
-    const CHUNK_SIZE = 200; // Safe chunk size for most BLE printers
-    for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
-      const chunk = data.slice(offset, offset + CHUNK_SIZE);
-      if (_btCharacteristic!.properties.writeWithoutResponse) {
-        await _btCharacteristic!.writeValueWithoutResponse(chunk);
-      } else {
-        await _btCharacteristic!.writeValueWithResponse(chunk);
+    const chunkSize = 200;
+    for (let offset = 0; offset < data.length; offset += chunkSize) {
+      const chunk = data.slice(offset, offset + chunkSize);
+      if (bluetoothCharacteristic?.properties.writeWithoutResponse) {
+        await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
+      } else if (bluetoothCharacteristic) {
+        await bluetoothCharacteristic.writeValueWithResponse(chunk);
       }
-      // Small delay between chunks to let the printer buffer
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
     return true;
@@ -385,51 +576,165 @@ export async function sendBluetoothData(data: Uint8Array): Promise<boolean> {
   }
 }
 
-/**
- * Disconnect the current Bluetooth printer
- */
 export function disconnectBluetoothPrinter(): void {
-  if (_btDevice?.gatt?.connected) {
-    _btDevice.gatt.disconnect();
+  if (bluetoothDevice?.gatt?.connected) {
+    bluetoothDevice.gatt.disconnect();
   }
-  _btDevice = null;
-  _btCharacteristic = null;
+  bluetoothDevice = null;
+  bluetoothCharacteristic = null;
 }
 
-// ─── Unified Print Function ──────────────────────────────────────────────────
-
-/**
- * Send print data using the appropriate connection method
- * Returns true if printed successfully, false if fallback to browser print is needed
- */
-export async function sendPrintData(
-  content: string,
-  config: PrinterConfig
-): Promise<boolean> {
-  const data = new TextEncoder().encode(content);
-
-  if (config.connectionType === "bluetooth" && config.connected) {
-    return sendBluetoothData(data);
+async function findUsbDevice(config: PrinterConfig): Promise<any> {
+  if (typeof navigator === "undefined" || !("usb" in navigator)) {
+    return null;
   }
 
-  if (config.connectionType === "usb" && config.connected) {
-    try {
-      const devices = await (navigator as any).usb.getDevices();
-      if (devices.length > 0) {
-        const device = devices[0];
-        await device.open();
-        if (device.configuration === null) {
-          await device.selectConfiguration(1);
+  const devices = await (navigator as any).usb.getDevices();
+  return (
+    devices.find((device: any) => {
+      const matchesSerial = config.deviceId && device.serialNumber === config.deviceId;
+      const matchesVendor = config.vendorId && String(device.vendorId) === config.vendorId;
+      const matchesProduct = config.productId && String(device.productId) === config.productId;
+      return Boolean(matchesSerial || (matchesVendor && matchesProduct));
+    }) ?? devices[0] ?? null
+  );
+}
+
+async function writeUsbData(device: any, data: Uint8Array): Promise<boolean> {
+  try {
+    if (!device.opened) {
+      await device.open();
+    }
+
+    if (device.configuration === null) {
+      await device.selectConfiguration(1);
+    }
+
+    const configuration = device.configuration;
+    if (!configuration) {
+      return false;
+    }
+
+    for (const iface of configuration.interfaces) {
+      for (const alternate of iface.alternates) {
+        const endpoint = alternate.endpoints.find((candidate: any) => candidate.direction === "out");
+        if (!endpoint) {
+          continue;
         }
-        await device.claimInterface(0);
-        await device.transferOut(1, data);
+
+        await device.claimInterface(iface.interfaceNumber);
+        if (alternate.alternateSetting !== iface.alternate.alternateSetting) {
+          await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting);
+        }
+        await device.transferOut(endpoint.endpointNumber, data);
         await device.close();
         return true;
       }
+    }
+  } catch {
+    try {
+      if (device.opened) {
+        await device.close();
+      }
     } catch {
-      return false;
+      // Ignore close failures.
     }
   }
 
-  return false; // Fallback to browser print needed
+  return false;
 }
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+export function openBrowserPrintWindow(
+  content: string,
+  layout: BillLayoutConfig = getBillLayoutConfig()
+): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const printWindow = window.open("", "PRINT", "height=720,width=480");
+  if (!printWindow) {
+    return false;
+  }
+
+  const pageWidth = layout.paperWidth <= 58 ? "58mm" : layout.paperWidth >= 110 ? "110mm" : "80mm";
+  const fontSize = layout.fontSize === "small" ? "11px" : layout.fontSize === "large" ? "14px" : "12px";
+
+  printWindow.document.write(`<!doctype html>
+<html>
+  <head>
+    <title>Receipt Print</title>
+    <style>
+      @page { margin: 0; size: ${pageWidth} auto; }
+      body { margin: 0; padding: 8mm 4mm; background: #ffffff; color: #111827; }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        font-family: "Courier New", monospace;
+        font-size: ${fontSize};
+        line-height: 1.45;
+      }
+    </style>
+  </head>
+  <body>
+    <pre>${escapeHtml(content)}</pre>
+  </body>
+</html>`);
+  printWindow.document.close();
+  printWindow.focus();
+  window.setTimeout(() => {
+    printWindow.print();
+  }, 150);
+  return true;
+}
+
+export async function sendPrintData(
+  content: string,
+  config: PrinterConfig,
+  layout: BillLayoutConfig = getBillLayoutConfig()
+): Promise<boolean> {
+  const lines = content.split(/\r?\n/);
+  const data = new TextEncoder().encode(generateEscPos(lines, layout));
+
+  if (config.connectionType === "bluetooth" && config.connected) {
+    return sendBluetoothData(data, config);
+  }
+
+  if (config.connectionType === "usb" && config.connected) {
+    const device = await findUsbDevice(config);
+    if (!device) {
+      return false;
+    }
+
+    return writeUsbData(device, data);
+  }
+
+  return false;
+}
+
+export async function printReceipt(
+  bill: PrintableBillData,
+  billNumber: string,
+  printerConfig: PrinterConfig = getPrinterConfig(),
+  layout: BillLayoutConfig = getBillLayoutConfig()
+): Promise<PrintTransportResult> {
+  const content = buildReceiptText(bill, billNumber, layout, bill.paymentMethod);
+  const printedToDevice = await sendPrintData(content, printerConfig, layout);
+
+  if (printedToDevice) {
+    return "device";
+  }
+
+  return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
+}
+
+
+
+

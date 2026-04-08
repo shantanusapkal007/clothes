@@ -12,10 +12,11 @@ import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
 import { parseBarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
+import { getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
 import type { Product } from "../types";
 
-export type BillDataWithProducts = ReturnType<typeof calculateCheckout> & {
-  items?: Array<{
+export type BillDataWithProducts = Omit<ReturnType<typeof calculateCheckout>, "items"> & {
+  items: Array<{
     productName: string;
     productId: string;
     quantity: number;
@@ -29,6 +30,19 @@ export type BillDataWithProducts = ReturnType<typeof calculateCheckout> & {
     total: number;
   }>;
 };
+
+function createPreviewBillNumber() {
+  return `PRE-${Date.now().toString().slice(-6)}`;
+}
+
+function describePrinterRoute() {
+  const printerConfig = getPrinterConfig();
+  if (!printerConfig.connected || printerConfig.connectionType === "none") {
+    return "Browser print fallback";
+  }
+
+  return `${printerConfig.connectionType.toUpperCase()} printer: ${printerConfig.name}`;
+}
 
 export function PosWorkspace() {
   const { addItem, items, clearCart, updateItem } = useCartStore();
@@ -44,6 +58,7 @@ export function PosWorkspace() {
   const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
   const [billPreviewOpen, setBillPreviewOpen] = useState(false);
   const [billData, setBillData] = useState<BillDataWithProducts | null>(null);
+  const [previewBillNumber, setPreviewBillNumber] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
 
   const visibleProducts = useMemo(() => {
@@ -61,6 +76,7 @@ export function PosWorkspace() {
   }, [products, search]);
 
   const cartSummary = useMemo(() => calculateCart(items), [items]);
+  const printerStatus = useMemo(() => describePrinterRoute(), [printerSettingsOpen, billPreviewOpen]);
 
   const loadProducts = async () => {
     try {
@@ -91,15 +107,11 @@ export function PosWorkspace() {
     }
 
     try {
-      // Parse barcode data (may contain price/discount embedded)
       const barcodeData = parseBarcodeData(barcode.trim());
-
       const product = await getProductByBarcode(barcodeData.barcode);
 
       addItem(product);
 
-      // Read the updated store state after addItem so barcode-driven overrides
-      // are applied to the actual cart line that was just inserted.
       const cartItem = useCartStore
         .getState()
         .items.find((item) => item.productId === product.id);
@@ -130,11 +142,10 @@ export function PosWorkspace() {
           messageBits.push(`qty ${barcodeData.quantity}`);
         }
 
-        setMessage(messageBits.join(" • "));
+        setMessage(messageBits.join(" | "));
       }
 
       setError(null);
-
       setBarcodeInput("");
     } catch {
       setCreateBarcode(parseBarcodeData(barcode.trim()).barcode);
@@ -170,7 +181,6 @@ export function PosWorkspace() {
       setError(null);
       setSelectedPaymentMethod(paymentMethod);
 
-      // Calculate bill summary
       const checkoutItems = items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -180,8 +190,6 @@ export function PosWorkspace() {
       }));
 
       const summary = calculateCheckout(checkoutItems);
-
-      // Show bill preview before actual checkout
       const billItems = summary.items.map((summaryItem) => ({
         ...summaryItem,
         productName: items.find((item) => item.productId === summaryItem.productId)?.name || "Item"
@@ -191,20 +199,57 @@ export function PosWorkspace() {
         ...summary,
         items: billItems
       });
+      setPreviewBillNumber(createPreviewBillNumber());
       setBillPreviewOpen(true);
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : "Checkout failed");
+    } finally {
       setCheckoutPending(false);
     }
   };
 
-  const handleConfirmCheckout = async (_customerPhone?: string) => {
+  const handleConfirmCheckout = async (shouldPrint: boolean) => {
+    const printableBill = billData
+      ? {
+          ...billData,
+          paymentMethod: selectedPaymentMethod
+        }
+      : null;
+
     try {
+      setCheckoutPending(true);
+      setError(null);
+
       const result = await checkoutBill(items, selectedPaymentMethod);
+      const savedBillNumber = result.id.slice(0, 8).toUpperCase();
+      let nextMessage = `Bill ${savedBillNumber} saved successfully`;
+
+      if (shouldPrint && printableBill) {
+        const printRoute = await printReceipt(
+          {
+            ...printableBill,
+            paymentMethod: selectedPaymentMethod,
+            createdAt: result.createdAt
+          },
+          savedBillNumber,
+          getPrinterConfig(),
+          getBillLayoutConfig()
+        );
+
+        if (printRoute === "device") {
+          nextMessage = `${nextMessage} and sent to the configured printer`;
+        } else if (printRoute === "browser") {
+          nextMessage = `${nextMessage}. Browser print preview opened because no direct printer connection was available.`;
+        } else {
+          setError("Bill saved, but printing failed. Check the printer connection and try again.");
+        }
+      }
+
       clearCart();
       setBillPreviewOpen(false);
       setBillData(null);
-      setMessage(`Bill ${result.id.slice(0, 8)} saved successfully`);
+      setPreviewBillNumber("");
+      setMessage(nextMessage);
       await loadProducts();
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : "Checkout failed");
@@ -300,25 +345,26 @@ export function PosWorkspace() {
         </div>
       ) : null}
 
-      {billPreviewOpen && billData && (
+      {billPreviewOpen && billData ? (
         <BillPrintPreview
           bill={billData}
-          billNumber={Math.random().toString(36).substring(7).toUpperCase()}
+          billNumber={previewBillNumber}
           paymentMethod={selectedPaymentMethod}
+          printerStatus={printerStatus}
           confirmPending={checkoutPending}
-          onPrint={() => undefined}
           onConfirmCheckout={handleConfirmCheckout}
           onClose={() => {
             setBillPreviewOpen(false);
             setBillData(null);
+            setPreviewBillNumber("");
             setCheckoutPending(false);
           }}
         />
-      )}
+      ) : null}
 
-      {printerSettingsOpen && (
+      {printerSettingsOpen ? (
         <PrinterSettings onClose={() => setPrinterSettingsOpen(false)} />
-      )}
+      ) : null}
 
       <CreateProductModal
         barcode={createBarcode}
@@ -329,3 +375,5 @@ export function PosWorkspace() {
     </>
   );
 }
+
+
