@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent
+} from "react";
+import { formatBarcodeString, parseBarcodeData } from "../lib/barcode-parser";
 
 interface ScannerPanelProps {
   barcodeInput: string;
   setBarcodeInput: (val: string) => void;
   onBarcodeSubmit: (barcode: string) => void;
 }
+
+const PRICE_PROMPT_KEY = "scanner-price-prompt";
 
 export function ScannerPanel({
   barcodeInput,
@@ -21,10 +31,21 @@ export function ScannerPanel({
     isScanning?: boolean;
   } | null>(null);
   const scanHandledRef = useRef(false);
+
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraPending, setCameraPending] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraSupported, setCameraSupported] = useState(false);
+
+  const [promptForPrice, setPromptForPrice] = useState(false);
+  const [pricePromptOpen, setPricePromptOpen] = useState(false);
+  const [pricePromptBarcode, setPricePromptBarcode] = useState<string | null>(null);
+  const [pricePromptError, setPricePromptError] = useState<string | null>(null);
+  const [pricePromptValues, setPricePromptValues] = useState({
+    price: "",
+    discount: "",
+    qty: "1"
+  });
 
   const focusInput = () => {
     window.setTimeout(() => {
@@ -40,36 +61,103 @@ export function ScannerPanel({
     }
   };
 
-  const submitBarcode = (value: string) => {
-    const nextValue = value.trim();
-    if (!nextValue) {
+  const closePricePrompt = () => {
+    setPricePromptOpen(false);
+    setPricePromptBarcode(null);
+    setPricePromptError(null);
+    focusInput();
+  };
+
+  const openPricePrompt = (barcode: string, defaults?: { discount?: number; quantity?: number }) => {
+    setPricePromptBarcode(barcode);
+    setPricePromptValues({
+      price: "",
+      discount: defaults?.discount !== undefined ? String(defaults.discount) : "",
+      qty: String(defaults?.quantity ?? 1)
+    });
+    setPricePromptError(null);
+    setPricePromptOpen(true);
+  };
+
+  const commitBarcode = (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
       focusInput();
       return;
     }
 
-    onBarcodeSubmit(nextValue);
+    const parsed = parseBarcodeData(trimmed);
+
+    if (promptForPrice && parsed.price === undefined) {
+      openPricePrompt(parsed.barcode, {
+        discount: parsed.discount,
+        quantity: parsed.quantity
+      });
+      return;
+    }
+
+    onBarcodeSubmit(trimmed);
     focusInput();
   };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    submitBarcode(barcodeInput);
+    commitBarcode(barcodeInput);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.key === "Enter" || event.key === "Tab") && barcodeInput.trim()) {
       event.preventDefault();
-      submitBarcode(barcodeInput);
+      commitBarcode(barcodeInput);
     }
   };
 
+  const handlePricePromptSubmit = (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!pricePromptBarcode) {
+      closePricePrompt();
+      return;
+    }
+
+    const price = Number(pricePromptValues.price);
+    if (!Number.isFinite(price) || price < 0) {
+      setPricePromptError("Enter a valid price from the sticker.");
+      return;
+    }
+
+    const discountRaw = pricePromptValues.discount.trim();
+    const discountValue = discountRaw ? Number(discountRaw) : undefined;
+    const discount =
+      discountValue !== undefined && Number.isFinite(discountValue)
+        ? Math.max(0, Math.min(100, discountValue))
+        : undefined;
+
+    const qtyRaw = parseInt(pricePromptValues.qty, 10);
+    const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : undefined;
+
+    const structured = formatBarcodeString(pricePromptBarcode, price, discount, quantity);
+    setBarcodeInput(structured);
+    setPricePromptOpen(false);
+    setPricePromptBarcode(null);
+    setPricePromptError(null);
+
+    onBarcodeSubmit(structured);
+    focusInput();
+  };
+
   useEffect(() => {
-    setCameraSupported(
+    const supported =
       typeof navigator !== "undefined" &&
-        typeof window !== "undefined" &&
-        Boolean(navigator.mediaDevices?.getUserMedia) &&
-        window.isSecureContext
-    );
+      typeof window !== "undefined" &&
+      Boolean(navigator.mediaDevices?.getUserMedia) &&
+      window.isSecureContext;
+
+    setCameraSupported(supported);
+
+    const storedPrompt = typeof window !== "undefined" ? localStorage.getItem(PRICE_PROMPT_KEY) : null;
+    setPromptForPrice(storedPrompt === "true");
+
     focusInput();
   }, []);
 
@@ -108,54 +196,44 @@ export function ScannerPanel({
           Html5QrcodeSupportedFormats?.QR_CODE
         ].filter(Boolean);
 
-        const cameras = typeof Html5Qrcode.getCameras === "function" ? await Html5Qrcode.getCameras() : [];
+        const cameras =
+          typeof Html5Qrcode.getCameras === "function" ? await Html5Qrcode.getCameras() : [];
         const preferredCamera = cameras.find((camera: { label?: string }) =>
           /(rear|back|environment)/i.test(camera.label || "")
         );
 
         const scannerConfig = {
           fps: 10,
-          qrbox: { width: 280, height: 140 },
-          formatsToSupport: formatsToSupport.length > 0 ? formatsToSupport : undefined
+          qrbox: { width: 300, height: 160 },
+          formatsToSupport: formatsToSupport.length > 0 ? formatsToSupport : undefined,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        };
+
+        const handleDecoded = (decodedText: string) => {
+          if (scanHandledRef.current) {
+            return;
+          }
+
+          scanHandledRef.current = true;
+          setBarcodeInput(decodedText);
+          setCameraOpen(false);
+          commitBarcode(decodedText);
         };
 
         try {
           await scanner.start(
             preferredCamera?.id ?? { facingMode: "environment" },
             scannerConfig,
-            async (decodedText: string) => {
-              if (scanHandledRef.current) {
-                return;
-              }
-
-              scanHandledRef.current = true;
-              setBarcodeInput(decodedText);
-              onBarcodeSubmit(decodedText);
-              setCameraOpen(false);
-            },
+            handleDecoded,
             () => {
               // Ignore per-frame decode noise.
             }
           );
         } catch {
           if (!preferredCamera && cameras[0]?.id) {
-            await scanner.start(
-              cameras[0].id,
-              scannerConfig,
-              async (decodedText: string) => {
-                if (scanHandledRef.current) {
-                  return;
-                }
-
-                scanHandledRef.current = true;
-                setBarcodeInput(decodedText);
-                onBarcodeSubmit(decodedText);
-                setCameraOpen(false);
-              },
-              () => {
-                // Ignore per-frame decode noise.
-              }
-            );
+            await scanner.start(cameras[0].id, scannerConfig, handleDecoded, () => undefined);
           } else {
             throw new Error("No compatible camera source found.");
           }
@@ -198,7 +276,7 @@ export function ScannerPanel({
         }
       }
     };
-  }, [cameraOpen, onBarcodeSubmit, scannerRegionId, setBarcodeInput]);
+  }, [cameraOpen, scannerRegionId, setBarcodeInput]);
 
   return (
     <>
@@ -240,7 +318,11 @@ export function ScannerPanel({
             onClick={() => setCameraOpen(true)}
             disabled={!cameraSupported}
             className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-on-primary shadow-lg transition-all hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 sm:h-14 sm:w-14 sm:rounded-lg shrink-0"
-            title={cameraSupported ? "Open Camera Scanner" : "Camera scanning requires HTTPS and camera permission"}
+            title={
+              cameraSupported
+                ? "Open Camera Scanner"
+                : "Camera scanning requires HTTPS and camera permission"
+            }
           >
             <span className="material-symbols-outlined" data-weight="fill">
               photo_camera
@@ -255,10 +337,26 @@ export function ScannerPanel({
           </button>
         </form>
 
-        <div className="mt-3 flex flex-col gap-1 text-xs text-on-secondary-container md:text-sm">
-          <p>Keyboard-style barcode scanners can type directly here and submit with Enter or Tab.</p>
+        <div className="mt-3 flex flex-col gap-2 text-xs text-on-secondary-container md:text-sm">
+          <p>Keyboard-style barcode scanners can type here and submit with Enter or Tab.</p>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={promptForPrice}
+              onChange={(event) => {
+                const next = event.target.checked;
+                setPromptForPrice(next);
+                localStorage.setItem(PRICE_PROMPT_KEY, String(next));
+              }}
+            />
+            <span>Sticker price prompt (when barcode does not include price)</span>
+          </label>
+
           {!cameraSupported ? (
-            <p>Camera scanning is available only in a secure browser context with camera permission enabled.</p>
+            <p>
+              Camera scanning is available only in a secure browser context (HTTPS) with camera permission enabled.
+            </p>
           ) : null}
         </div>
       </div>
@@ -295,12 +393,85 @@ export function ScannerPanel({
               {cameraError ? <p className="error-text">{cameraError}</p> : null}
 
               <p className="text-sm text-on-secondary-container">
-                Embedded formats like <code>barcode|price|discount|qty</code> are supported.
+                For price-on-sticker workflows, QR codes scan best. Embedded formats like{" "}
+                <code>barcode|price|discount|qty</code> are supported.
               </p>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pricePromptOpen && pricePromptBarcode ? (
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-lg">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Sticker price</p>
+                <h2>Enter price from sticker</h2>
+              </div>
+              <button
+                className="button button-ghost self-start sm:self-auto"
+                type="button"
+                onClick={closePricePrompt}
+              >
+                Cancel
+              </button>
+            </div>
+
+            <form className="space-y-4" onSubmit={handlePricePromptSubmit}>
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 text-sm">
+                <p className="text-on-secondary-container">Scanned barcode</p>
+                <p className="mt-1 font-mono text-on-surface break-all">{pricePromptBarcode}</p>
+              </div>
+
+              <div className="inventory-grid">
+                <input
+                  className="text-input"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="Price (Rs)"
+                  value={pricePromptValues.price}
+                  onChange={(event) =>
+                    setPricePromptValues((current) => ({ ...current, price: event.target.value }))
+                  }
+                  required
+                />
+                <input
+                  className="text-input"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={100}
+                  placeholder="Discount % (optional)"
+                  value={pricePromptValues.discount}
+                  onChange={(event) =>
+                    setPricePromptValues((current) => ({ ...current, discount: event.target.value }))
+                  }
+                />
+                <input
+                  className="text-input"
+                  type="number"
+                  min={1}
+                  step="1"
+                  placeholder="Quantity"
+                  value={pricePromptValues.qty}
+                  onChange={(event) =>
+                    setPricePromptValues((current) => ({ ...current, qty: event.target.value }))
+                  }
+                />
+              </div>
+
+              {pricePromptError ? <p className="error-text">{pricePromptError}</p> : null}
+
+              <button className="button button-primary w-full" type="submit">
+                Continue
+              </button>
+            </form>
           </div>
         </div>
       ) : null}
     </>
   );
 }
+

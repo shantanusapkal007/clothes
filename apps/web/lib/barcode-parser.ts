@@ -10,6 +10,16 @@ export interface BarcodeData {
   quantity?: number;
   rawData: string;
 }
+function parseLooseNumber(value: string): number | undefined {
+  const match = value
+    .replace(",", ".")
+    .match(/-?\d+(?:\.\d+)?/);
+  if (!match) {
+    return undefined;
+  }
+  const parsed = parseFloat(match[0]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /**
  * Parse barcode data from scanned text
@@ -65,16 +75,16 @@ function parsePipeFormat(data: string): BarcodeData {
 
   // Parse price (second part)
   if (parts[1]) {
-    const priceNum = parseFloat(parts[1]);
-    if (!isNaN(priceNum)) {
+    const priceNum = parseLooseNumber(parts[1]);
+    if (priceNum !== undefined) {
       result.price = Math.abs(priceNum);
     }
   }
 
   // Parse discount percentage (third part)
   if (parts[2]) {
-    const discountNum = parseFloat(parts[2]);
-    if (!isNaN(discountNum)) {
+    const discountNum = parseLooseNumber(parts[2]);
+    if (discountNum !== undefined) {
       result.discount = Math.max(0, Math.min(100, discountNum));
     }
   }
@@ -100,15 +110,15 @@ function parseColonFormat(data: string): BarcodeData {
   };
 
   if (parts[1]) {
-    const priceNum = parseFloat(parts[1]);
-    if (!isNaN(priceNum)) {
+    const priceNum = parseLooseNumber(parts[1]);
+    if (priceNum !== undefined) {
       result.price = Math.abs(priceNum);
     }
   }
 
   if (parts[2]) {
-    const discountNum = parseFloat(parts[2]);
-    if (!isNaN(discountNum)) {
+    const discountNum = parseLooseNumber(parts[2]);
+    if (discountNum !== undefined) {
       result.discount = Math.max(0, Math.min(100, discountNum));
     }
   }
@@ -146,3 +156,4 @@ export function formatBarcodeString(
 
   return result;
 }
+

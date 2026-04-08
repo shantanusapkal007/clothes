@@ -10,7 +10,7 @@ import { PrinterSettings } from "./PrinterSettings";
 import { checkoutBill, createProduct, getProductByBarcode, getProducts } from "../lib/api";
 import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
-import { parseBarcodeData } from "../lib/barcode-parser";
+import { parseBarcodeData, type BarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
 import { getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
 import type { Product } from "../types";
@@ -54,6 +54,7 @@ export function PosWorkspace() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [createBarcode, setCreateBarcode] = useState("");
+  const [createSeed, setCreateSeed] = useState<BarcodeData | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
   const [billPreviewOpen, setBillPreviewOpen] = useState(false);
@@ -106,8 +107,9 @@ export function PosWorkspace() {
       return;
     }
 
+    const barcodeData = parseBarcodeData(barcode.trim());
+
     try {
-      const barcodeData = parseBarcodeData(barcode.trim());
       const product = await getProductByBarcode(barcodeData.barcode);
 
       addItem(product);
@@ -148,13 +150,13 @@ export function PosWorkspace() {
       setError(null);
       setBarcodeInput("");
     } catch {
-      setCreateBarcode(parseBarcodeData(barcode.trim()).barcode);
+      setCreateBarcode(barcodeData.barcode);
+      setCreateSeed(barcodeData);
       setCreateModalOpen(true);
       setMessage(null);
       setError("Barcode not found. Create the product and continue.");
     }
   };
-
   const handleCreateProduct = async (payload: {
     name: string;
     category?: string;
@@ -368,12 +370,17 @@ export function PosWorkspace() {
 
       <CreateProductModal
         barcode={createBarcode}
+        seed={createSeed}
         open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setCreateSeed(null);
+        }}
         onCreate={handleCreateProduct}
       />
     </>
   );
 }
+
 
 
