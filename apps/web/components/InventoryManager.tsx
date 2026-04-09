@@ -190,34 +190,22 @@ export function InventoryManager() {
               <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Price (Rs) <span className="text-error">*</span>
               </label>
-              <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
-                placeholder="0.00"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                value={form.price || ""}
-                onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
-              />
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
+                  Rs
+                </span>
+                <input
+                  className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 pl-11 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4 md:pl-12"
+                  placeholder="0.00"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={form.price || ""}
+                  onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Cost Price
-              </label>
-              <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
-                placeholder="0.00"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.costPrice || ""}
-                onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Initial Stock
@@ -229,22 +217,6 @@ export function InventoryManager() {
                 min="0"
                 value={form.stock || ""}
                 onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value, 10) || 0 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Tax %
-              </label>
-              <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
-                placeholder="0"
-                type="number"
-                min="0"
-                max="100"
-                value={form.taxPercent || ""}
-                onChange={(e) =>
-                  setForm({ ...form, taxPercent: parseInt(e.target.value, 10) || 0 })
-                }
               />
             </div>
           </div>

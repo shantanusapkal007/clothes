@@ -111,88 +111,47 @@ export function CreateProductModal({
             <div className="inventory-grid">
               <input
                 className="text-input"
-                placeholder="Barcode"
-                value={form.barcode}
-                onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
-              />
-              <input
-                className="text-input"
-                type="number"
-                step="0.01"
-                min={0}
-                placeholder="Selling price (Rs)"
-                value={form.price}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, price: Number(event.target.value) }))
-                }
-                required
-              />
-            </div>
-
-            <div className="inventory-grid">
-              <input
-                className="text-input"
                 placeholder="Category (optional)"
                 value={form.category}
                 onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
               />
               <input
                 className="text-input"
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="Default tax % (optional)"
-                value={form.taxPercent}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, taxPercent: Number(event.target.value) }))
-                }
+                placeholder="Barcode (optional)"
+                value={form.barcode}
+                onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
               />
             </div>
           </section>
 
           <section className="rounded-3xl border border-outline-variant/20 bg-surface-container-lowest p-4">
-            <p className="eyebrow">Inventory & cost</p>
+            <p className="eyebrow">Pricing & Inventory</p>
             <div className="inventory-grid">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
+                  Rs
+                </span>
+                <input
+                  className="text-input w-full pl-11"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="Price"
+                  value={form.price || ""}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, price: Number(event.target.value) }))
+                  }
+                  required
+                />
+              </div>
               <input
                 className="text-input"
                 type="number"
                 min={0}
-                placeholder="Stock"
+                placeholder="Initial stock"
                 value={form.stock}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, stock: Number(event.target.value) }))
-                }
-              />
-              <input
-                className="text-input"
-                type="number"
-                min={0}
-                placeholder="Min stock"
-                value={form.minStock}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, minStock: Number(event.target.value) }))
-                }
-              />
-              <input
-                className="text-input"
-                type="number"
-                step="0.01"
-                min={0}
-                placeholder="Cost price (optional)"
-                value={form.costPrice}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, costPrice: Number(event.target.value) }))
-                }
-              />
-              <input
-                className="text-input"
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="Default discount % (optional)"
-                value={form.discountPercent}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, discountPercent: Number(event.target.value) }))
                 }
               />
             </div>
