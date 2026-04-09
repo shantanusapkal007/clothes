@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { DEFAULT_BILL_LAYOUT, getBillLayoutConfig } from "../lib/printer";
+import { DEFAULT_BILL_LAYOUT, getBillLayoutConfig, buildReceiptText } from "../lib/printer";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -66,109 +66,21 @@ export function BillPrintPreview({
           </div>
         </div>
 
-        <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto px-4 py-5 font-mono text-xs text-stone-800 sm:px-6 md:px-8 md:py-6 md:text-sm">
-          <div className="mb-6 text-center">
-            <h2 className="mb-1 font-serif text-2xl font-bold leading-tight tracking-tight text-stone-900">
-              {layout.companyName || DEFAULT_BILL_LAYOUT.companyName}
-            </h2>
-            {layout.companyAddress ? (
-              <div className="whitespace-pre-wrap text-[10px] uppercase tracking-widest text-stone-600">
-                {layout.companyAddress}
-              </div>
-            ) : null}
-            {layout.companyPhone ? (
-              <div className="mt-1 text-[10px] uppercase tracking-widest text-stone-600">
-                TEL: {layout.companyPhone}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mb-4 flex justify-between border-y border-dashed border-stone-300 py-3 text-[10px] uppercase sm:text-xs">
-            <div>
-              <div className="mb-0.5 opacity-60">Transaction</div>
-              <div className="font-bold">#{billNumber}</div>
-            </div>
-            <div className="text-right">
-              <div className="mb-0.5 opacity-60">Date / Time</div>
-              <div className="font-bold">
-                {new Date().toLocaleString("en-IN", {
-                  hour12: true,
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1">
-            <table className="mb-4 w-full">
-              <thead>
-                <tr className="border-b border-stone-200 text-left text-[10px] uppercase opacity-70">
-                  <th className="pb-2 font-normal">Item</th>
-                  <th className="pb-2 text-center font-normal">Qty</th>
-                  <th className="pb-2 text-right font-normal">Price</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dotted divide-stone-200">
-                {bill.items?.map((item, index) => (
-                  <tr key={`${item.productId}-${index}`}>
-                    <td className="py-3 pr-2">
-                      <div className="max-w-[120px] truncate font-bold sm:max-w-[160px]">{item.productName}</div>
-                      {layout.showItemDetails ? (
-                        <div className="mt-1 text-[9px] uppercase opacity-70">
-                          {item.discountPercent > 0 ? <span>Disc -{item.discountPercent}% </span> : null}
-                          {item.taxPercent > 0 ? <span>Tax +{item.taxPercent}%</span> : null}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="py-3 text-center opacity-80">{item.quantity}</td>
-                    <td className="w-16 py-3 text-right font-bold">{item.total.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-auto space-y-2 border-t border-dashed border-stone-300 pt-4">
-            <div className="flex justify-between text-xs">
-              <span className="opacity-80">Subtotal</span>
-              <span>{bill.totalAmount.toFixed(2)}</span>
-            </div>
-
-            {layout.showDiscountBreakdown && bill.discountAmount > 0 ? (
-              <div className="flex justify-between text-xs">
-                <span className="opacity-80">Discount Total</span>
-                <span>-{bill.discountAmount.toFixed(2)}</span>
-              </div>
-            ) : null}
-
-            {layout.showTaxBreakdown && bill.taxAmount > 0 ? (
-              <div className="flex justify-between text-xs">
-                <span className="opacity-80">Tax</span>
-                <span>+{bill.taxAmount.toFixed(2)}</span>
-              </div>
-            ) : null}
-
-            <div className="mt-3 flex justify-between border-t border-stone-300 pt-3">
-              <span className="font-bold uppercase text-stone-500">Method</span>
-              <span className="font-bold uppercase text-stone-800">{paymentMethod}</span>
-            </div>
-
-            <div className="mt-4 flex items-end justify-between">
-              <span className="text-sm font-bold uppercase text-stone-500">Total</span>
-              <span className="font-serif text-2xl font-bold leading-none text-stone-900">
-                Rs {bill.finalAmount.toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-dashed border-stone-300 pt-4 text-center">
-            <p className="italic opacity-80">{layout.footerText || DEFAULT_BILL_LAYOUT.footerText}</p>
-            <div className="mt-4 flex justify-center opacity-60">
-              <span className="material-symbols-outlined text-4xl">receipt_long</span>
-            </div>
+        <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto bg-white px-2 py-6 text-stone-900 justify-start items-center">
+          <div 
+            className="bg-white shadow-sm border border-stone-200 p-4 min-h-[300px]"
+            style={{ width: `${layout.paperWidth || 80}mm` }}
+          >
+            <pre 
+              className="m-0 whitespace-pre font-mono mx-auto overflow-hidden text-black"
+              style={{
+                fontSize: `calc((${layout.paperWidth || 80}mm - 4mm) / ${layout.itemsPerLine || 32} * 1.6)`,
+                lineHeight: 1.2,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+              }}
+            >
+              {buildReceiptText({ ...bill, paymentMethod }, billNumber, layout, paymentMethod)}
+            </pre>
           </div>
         </div>
 

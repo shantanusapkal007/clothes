@@ -65,7 +65,7 @@ const USB_REQUEST_FILTERS = [
   { vendorId: 0x0416 },
   { vendorId: 0x04b8 },
   { vendorId: 0x0483 },
-  { vendorId: 0x0fe6 }
+  { vendorId: 0x0fe6 },
 ];
 
 const BT_PRINTER_SERVICE_UUIDS = [
@@ -75,7 +75,7 @@ const BT_PRINTER_SERVICE_UUIDS = [
   "0000ffe0-0000-1000-8000-00805f9b34fb", // BLE UART (FFE0)
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART Service (NUS)
   "0000fff0-0000-1000-8000-00805f9b34fb", // Common vendor UART
-  "0000ff00-0000-1000-8000-00805f9b34fb" // Common vendor UART
+  "0000ff00-0000-1000-8000-00805f9b34fb", // Common vendor UART
 ];
 
 const BT_PRINTER_CHAR_UUIDS = [
@@ -85,7 +85,7 @@ const BT_PRINTER_CHAR_UUIDS = [
   "0000ffe1-0000-1000-8000-00805f9b34fb", // BLE UART (FFE1)
   "6e400002-b5a3-f393-e0a9-e50e24dcca9e", // NUS write
   "0000fff1-0000-1000-8000-00805f9b34fb",
-  "0000ff01-0000-1000-8000-00805f9b34fb"
+  "0000ff01-0000-1000-8000-00805f9b34fb",
 ];
 
 let bluetoothDevice: any = null;
@@ -96,7 +96,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   name: "Thermal Printer",
   connectionType: "none",
   width: 80,
-  connected: false
+  connected: false,
 };
 
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
@@ -109,11 +109,13 @@ export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
   fontSize: "medium",
   paperWidth: 80,
   marginLeft: 2,
-  marginRight: 2
+  marginRight: 2,
 };
 
 export const ESC_POS = {
   INIT: "\x1b\x40",
+  FONT_A: "\x1b\x4d\x00",
+  FONT_B: "\x1b\x4d\x01",
   BOLD_ON: "\x1b\x45\x01",
   BOLD_OFF: "\x1b\x45\x00",
   ALIGN_LEFT: "\x1b\x61\x00",
@@ -123,29 +125,31 @@ export const ESC_POS = {
   SIZE_DOUBLE: "\x1d\x21\x11",
   NEWLINE: "\x0a",
   CUT_PAPER: "\x1d\x56\x42\x00",
-  FEED_LINES: (lines: number) => `\x1b\x64${String.fromCharCode(lines)}`
+  FEED_LINES: (lines: number) => `\x1b\x64${String.fromCharCode(lines)}`,
 };
 
 function getDefaultItemsPerLine(
   paperWidth: number,
-  fontSize: BillLayoutConfig["fontSize"]
+  fontSize: BillLayoutConfig["fontSize"],
 ): number {
   if (paperWidth <= 58) {
-    return fontSize === "small" ? 34 : fontSize === "large" ? 24 : 28;
+    return fontSize === "small" ? 42 : fontSize === "large" ? 16 : 32;
   }
 
   if (paperWidth >= 110) {
-    return fontSize === "small" ? 64 : fontSize === "large" ? 48 : 56;
+    return fontSize === "small" ? 80 : fontSize === "large" ? 34 : 68;
   }
 
-  return fontSize === "small" ? 52 : fontSize === "large" ? 36 : 48;
+  return fontSize === "small" ? 64 : fontSize === "large" ? 24 : 48;
 }
 
 export function normalizeBillLayoutConfig(
-  config: Partial<BillLayoutConfig> = {}
+  config: Partial<BillLayoutConfig> = {},
 ): BillLayoutConfig {
   const fontSize = config.fontSize ?? DEFAULT_BILL_LAYOUT.fontSize;
-  const paperWidth = Number(config.paperWidth ?? DEFAULT_BILL_LAYOUT.paperWidth) || DEFAULT_BILL_LAYOUT.paperWidth;
+  const paperWidth =
+    Number(config.paperWidth ?? DEFAULT_BILL_LAYOUT.paperWidth) ||
+    DEFAULT_BILL_LAYOUT.paperWidth;
   const computedItemsPerLine = getDefaultItemsPerLine(paperWidth, fontSize);
 
   return {
@@ -153,9 +157,17 @@ export function normalizeBillLayoutConfig(
     ...config,
     fontSize,
     paperWidth,
-    itemsPerLine: Number(config.itemsPerLine ?? computedItemsPerLine) || computedItemsPerLine,
-    marginLeft: Math.max(0, Number(config.marginLeft ?? DEFAULT_BILL_LAYOUT.marginLeft) || 0),
-    marginRight: Math.max(0, Number(config.marginRight ?? DEFAULT_BILL_LAYOUT.marginRight) || 0)
+    itemsPerLine:
+      Number(config.itemsPerLine ?? computedItemsPerLine) ||
+      computedItemsPerLine,
+    marginLeft: Math.max(
+      0,
+      Number(config.marginLeft ?? DEFAULT_BILL_LAYOUT.marginLeft) || 0,
+    ),
+    marginRight: Math.max(
+      0,
+      Number(config.marginRight ?? DEFAULT_BILL_LAYOUT.marginRight) || 0,
+    ),
   };
 }
 
@@ -172,7 +184,7 @@ export function getPrinterConfig(): PrinterConfig {
   try {
     return {
       ...DEFAULT_PRINTER_CONFIG,
-      ...(JSON.parse(stored) as Partial<PrinterConfig>)
+      ...(JSON.parse(stored) as Partial<PrinterConfig>),
     };
   } catch {
     return DEFAULT_PRINTER_CONFIG;
@@ -188,8 +200,8 @@ export function savePrinterConfig(config: PrinterConfig): void {
     PRINTER_STORAGE_KEY,
     JSON.stringify({
       ...DEFAULT_PRINTER_CONFIG,
-      ...config
-    })
+      ...config,
+    }),
   );
 }
 
@@ -204,7 +216,9 @@ export function getBillLayoutConfig(): BillLayoutConfig {
   }
 
   try {
-    return normalizeBillLayoutConfig(JSON.parse(stored) as Partial<BillLayoutConfig>);
+    return normalizeBillLayoutConfig(
+      JSON.parse(stored) as Partial<BillLayoutConfig>,
+    );
   } catch {
     return DEFAULT_BILL_LAYOUT;
   }
@@ -294,7 +308,7 @@ function centerText(text: string, width: number): string {
 function getMarginCharacters(layout: BillLayoutConfig) {
   return {
     left: Math.round(layout.marginLeft / 2),
-    right: Math.round(layout.marginRight / 2)
+    right: Math.round(layout.marginRight / 2),
   };
 }
 
@@ -302,7 +316,7 @@ function buildReceiptLines(
   bill: PrintableBillData,
   billNumber: string,
   layout: BillLayoutConfig,
-  paymentMethod: string
+  paymentMethod: string,
 ): string[] {
   const { left, right } = getMarginCharacters(layout);
   const receiptWidth = Math.max(24, layout.itemsPerLine - left - right);
@@ -326,9 +340,7 @@ function buildReceiptLines(
 
   lines.push(separator);
 
-  const receiptDate = bill.createdAt
-    ? new Date(bill.createdAt)
-    : new Date();
+  const receiptDate = bill.createdAt ? new Date(bill.createdAt) : new Date();
 
   lines.push(padLine("Bill", billNumber, receiptWidth));
   lines.push(
@@ -339,17 +351,20 @@ function buildReceiptLines(
         month: "short",
         hour: "2-digit",
         minute: "2-digit",
-        hour12: true
+        hour12: true,
       }),
-      receiptWidth
-    )
+      receiptWidth,
+    ),
   );
   lines.push(separator);
   lines.push(padLine("Item", "Total", receiptWidth));
   lines.push(separator);
 
   for (const item of bill.items) {
-    for (const [index, line] of wrapText(item.productName, receiptWidth).entries()) {
+    for (const [index, line] of wrapText(
+      item.productName,
+      receiptWidth,
+    ).entries()) {
       lines.push(index === 0 ? line : `  ${line}`.slice(0, receiptWidth));
     }
 
@@ -357,14 +372,17 @@ function buildReceiptLines(
       padLine(
         `${item.quantity} x ${item.price.toFixed(2)}`,
         item.total.toFixed(2),
-        receiptWidth
-      )
+        receiptWidth,
+      ),
     );
 
-    if (layout.showItemDetails && (item.discountPercent > 0 || item.taxPercent > 0)) {
+    if (
+      layout.showItemDetails &&
+      (item.discountPercent > 0 || item.taxPercent > 0)
+    ) {
       const detailParts = [
         item.discountPercent > 0 ? `Disc ${item.discountPercent}%` : "",
-        item.taxPercent > 0 ? `Tax ${item.taxPercent}%` : ""
+        item.taxPercent > 0 ? `Tax ${item.taxPercent}%` : "",
       ].filter(Boolean);
       lines.push(detailParts.join(" | "));
     }
@@ -374,7 +392,13 @@ function buildReceiptLines(
   lines.push(padLine("Subtotal", formatAmount(bill.totalAmount), receiptWidth));
 
   if (layout.showDiscountBreakdown && bill.discountAmount > 0) {
-    lines.push(padLine("Discount", `-${formatAmount(bill.discountAmount)}`, receiptWidth));
+    lines.push(
+      padLine(
+        "Discount",
+        `-${formatAmount(bill.discountAmount)}`,
+        receiptWidth,
+      ),
+    );
   }
 
   if (layout.showTaxBreakdown && bill.taxAmount > 0) {
@@ -390,22 +414,38 @@ function buildReceiptLines(
     pushWrapped(layout.footerText, "center");
   }
 
-  return lines.map((line) => `${" ".repeat(left)}${line.slice(0, receiptWidth)}${" ".repeat(right)}`);
+  return lines.map(
+    (line) =>
+      `${" ".repeat(left)}${line.slice(0, receiptWidth)}${" ".repeat(right)}`,
+  );
 }
 
 export function buildReceiptText(
   bill: PrintableBillData,
   billNumber: string,
   layout: BillLayoutConfig = getBillLayoutConfig(),
-  paymentMethod = bill.paymentMethod
+  paymentMethod = bill.paymentMethod,
 ): string {
   return buildReceiptLines(bill, billNumber, layout, paymentMethod).join("\n");
 }
 
-export function generateEscPos(lines: string[], billLayout: BillLayoutConfig): string {
+export function generateEscPos(
+  lines: string[],
+  billLayout: BillLayoutConfig,
+): string {
   let commands = ESC_POS.INIT;
   commands += ESC_POS.ALIGN_LEFT;
-  commands += billLayout.fontSize === "large" ? ESC_POS.SIZE_DOUBLE : ESC_POS.SIZE_NORMAL;
+
+  if (billLayout.fontSize === "small") {
+    commands += ESC_POS.FONT_B;
+    commands += ESC_POS.SIZE_NORMAL;
+  } else if (billLayout.fontSize === "large") {
+    commands += ESC_POS.FONT_A;
+    commands += ESC_POS.SIZE_DOUBLE;
+  } else {
+    commands += ESC_POS.FONT_A;
+    commands += ESC_POS.SIZE_NORMAL;
+  }
 
   for (const line of lines) {
     commands += `${line}${ESC_POS.NEWLINE}`;
@@ -448,7 +488,7 @@ export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
       vendorId: String(device.vendorId),
       productId: String(device.productId),
       width: 80,
-      connected: true
+      connected: true,
     }));
   } catch {
     return [];
@@ -462,7 +502,7 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
 
   try {
     const device = await (navigator as any).usb.requestDevice({
-      filters: USB_REQUEST_FILTERS
+      filters: USB_REQUEST_FILTERS,
     });
 
     return {
@@ -472,7 +512,7 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
       vendorId: String(device.vendorId),
       productId: String(device.productId),
       width: 80,
-      connected: true
+      connected: true,
     };
   } catch {
     return null;
@@ -546,7 +586,9 @@ export async function getAvailableSerialPrinters(): Promise<PrinterConfig[]> {
     return ports.map((port: any, index: number) => {
       const info = typeof port.getInfo === "function" ? port.getInfo() : {};
       const vendorId = info.usbVendorId ? String(info.usbVendorId) : undefined;
-      const productId = info.usbProductId ? String(info.usbProductId) : undefined;
+      const productId = info.usbProductId
+        ? String(info.usbProductId)
+        : undefined;
 
       const nameParts = ["Serial Printer"];
       if (vendorId && productId) {
@@ -562,7 +604,7 @@ export async function getAvailableSerialPrinters(): Promise<PrinterConfig[]> {
         productId,
         serialBaudRate: 9600,
         width: 80,
-        connected: true
+        connected: true,
       };
     });
   } catch {
@@ -570,7 +612,9 @@ export async function getAvailableSerialPrinters(): Promise<PrinterConfig[]> {
   }
 }
 
-export async function requestSerialPrinter(baudRate: number = 9600): Promise<PrinterConfig | null> {
+export async function requestSerialPrinter(
+  baudRate: number = 9600,
+): Promise<PrinterConfig | null> {
   if (!isSerialAvailable()) {
     return null;
   }
@@ -595,7 +639,7 @@ export async function requestSerialPrinter(baudRate: number = 9600): Promise<Pri
       productId,
       serialBaudRate: baudRate,
       width: 80,
-      connected: true
+      connected: true,
     };
   } catch {
     return null;
@@ -619,7 +663,10 @@ export async function disconnectSerialPrinter(): Promise<void> {
   }
 }
 
-export async function sendSerialData(data: Uint8Array, config?: PrinterConfig): Promise<boolean> {
+export async function sendSerialData(
+  data: Uint8Array,
+  config?: PrinterConfig,
+): Promise<boolean> {
   if (!isSerialAvailable()) {
     return false;
   }
@@ -682,7 +729,7 @@ export function getAvailableConnectionTypes(): Record<string, boolean> {
     usb: isUsbAvailable(),
     serial: isSerialAvailable(),
     bluetooth: isBluetoothAvailable(),
-    rawbt: isRawBtAvailable()
+    rawbt: isRawBtAvailable(),
   };
 }
 
@@ -709,7 +756,9 @@ export function sendViaRawBt(data: Uint8Array): boolean {
   }
 }
 
-export async function getAvailableBluetoothPrinters(): Promise<PrinterConfig[]> {
+export async function getAvailableBluetoothPrinters(): Promise<
+  PrinterConfig[]
+> {
   if (!isBluetoothAvailable()) {
     return [];
   }
@@ -729,7 +778,7 @@ export async function getAvailableBluetoothPrinters(): Promise<PrinterConfig[]> 
       connectionType: "bluetooth",
       bluetoothDeviceId: device.id,
       width: 80,
-      connected: false
+      connected: false,
     }));
   } catch {
     return [];
@@ -754,7 +803,9 @@ async function hydrateBluetoothDevice(config?: PrinterConfig): Promise<any> {
   }
 
   const devices = await bluetoothNavigator.getDevices();
-  const matchedDevice = devices.find((device: any) => device.id === config.bluetoothDeviceId) ?? null;
+  const matchedDevice =
+    devices.find((device: any) => device.id === config.bluetoothDeviceId) ??
+    null;
   bluetoothDevice = matchedDevice;
   return matchedDevice;
 }
@@ -767,7 +818,7 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
   try {
     const device = await (navigator as any).bluetooth.requestDevice({
       acceptAllDevices: true,
-      optionalServices: BT_PRINTER_SERVICE_UUIDS
+      optionalServices: BT_PRINTER_SERVICE_UUIDS,
     });
 
     bluetoothDevice = device;
@@ -777,7 +828,7 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
       connectionType: "bluetooth",
       bluetoothDeviceId: device.id,
       width: 80,
-      connected: true
+      connected: true,
     };
   } catch {
     return null;
@@ -791,7 +842,9 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
   }
 
   try {
-    const server = device.gatt.connected ? device.gatt : await device.gatt.connect();
+    const server = device.gatt.connected
+      ? device.gatt
+      : await device.gatt.connect();
 
     for (const serviceUuid of BT_PRINTER_SERVICE_UUIDS) {
       try {
@@ -799,7 +852,8 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
         const characteristics = await service.getCharacteristics();
         const writableCharacteristic = characteristics.find(
           (characteristic: any) =>
-            characteristic.properties.write || characteristic.properties.writeWithoutResponse
+            characteristic.properties.write ||
+            characteristic.properties.writeWithoutResponse,
         );
 
         if (writableCharacteristic) {
@@ -819,7 +873,8 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
         const characteristics = await service.getCharacteristics();
         const writable = characteristics.find(
           (characteristic: any) =>
-            characteristic.properties.write || characteristic.properties.writeWithoutResponse
+            characteristic.properties.write ||
+            characteristic.properties.writeWithoutResponse,
         );
         if (writable) {
           bluetoothCharacteristic = writable;
@@ -834,8 +889,12 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
     for (const service of services) {
       for (const characteristicUuid of BT_PRINTER_CHAR_UUIDS) {
         try {
-          const characteristic = await service.getCharacteristic(characteristicUuid);
-          if (characteristic.properties.write || characteristic.properties.writeWithoutResponse) {
+          const characteristic =
+            await service.getCharacteristic(characteristicUuid);
+          if (
+            characteristic.properties.write ||
+            characteristic.properties.writeWithoutResponse
+          ) {
             bluetoothCharacteristic = characteristic;
             return characteristic;
           }
@@ -853,7 +912,7 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
 
 export async function sendBluetoothData(
   data: Uint8Array,
-  config?: PrinterConfig
+  config?: PrinterConfig,
 ): Promise<boolean> {
   if (!bluetoothCharacteristic) {
     const characteristic = await connectBluetoothPrinter(config);
@@ -895,11 +954,16 @@ async function findUsbDevice(config: PrinterConfig): Promise<any> {
   const devices = await (navigator as any).usb.getDevices();
   return (
     devices.find((device: any) => {
-      const matchesSerial = config.deviceId && device.serialNumber === config.deviceId;
-      const matchesVendor = config.vendorId && String(device.vendorId) === config.vendorId;
-      const matchesProduct = config.productId && String(device.productId) === config.productId;
+      const matchesSerial =
+        config.deviceId && device.serialNumber === config.deviceId;
+      const matchesVendor =
+        config.vendorId && String(device.vendorId) === config.vendorId;
+      const matchesProduct =
+        config.productId && String(device.productId) === config.productId;
       return Boolean(matchesSerial || (matchesVendor && matchesProduct));
-    }) ?? devices[0] ?? null
+    }) ??
+    devices[0] ??
+    null
   );
 }
 
@@ -920,7 +984,9 @@ async function writeUsbData(device: any, data: Uint8Array): Promise<boolean> {
 
     for (const iface of configuration.interfaces) {
       for (const alternate of iface.alternates) {
-        const endpoint = alternate.endpoints.find((candidate: any) => candidate.direction === "out");
+        const endpoint = alternate.endpoints.find(
+          (candidate: any) => candidate.direction === "out",
+        );
         if (!endpoint) {
           continue;
         }
@@ -932,7 +998,10 @@ async function writeUsbData(device: any, data: Uint8Array): Promise<boolean> {
             iface.alternate &&
             alternate.alternateSetting !== iface.alternate.alternateSetting
           ) {
-            await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting);
+            await device.selectAlternateInterface(
+              iface.interfaceNumber,
+              alternate.alternateSetting,
+            );
           }
         } catch {
           // Some devices do not support alternate selection.
@@ -964,7 +1033,7 @@ function escapeHtml(value: string): string {
 
 export function openBrowserPrintWindow(
   content: string,
-  layout: BillLayoutConfig = getBillLayoutConfig()
+  layout: BillLayoutConfig = getBillLayoutConfig(),
 ): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -975,8 +1044,18 @@ export function openBrowserPrintWindow(
     return false;
   }
 
-  const pageWidth = layout.paperWidth <= 58 ? "58mm" : layout.paperWidth >= 110 ? "110mm" : "80mm";
-  const fontSize = layout.fontSize === "small" ? "11px" : layout.fontSize === "large" ? "14px" : "12px";
+  const pageWidth =
+    layout.paperWidth <= 58
+      ? "58mm"
+      : layout.paperWidth >= 110
+        ? "110mm"
+        : "80mm";
+  const fontSize =
+    layout.fontSize === "small"
+      ? "11px"
+      : layout.fontSize === "large"
+        ? "14px"
+        : "12px";
 
   printWindow.document.write(`<!doctype html>
 <html>
@@ -984,13 +1063,15 @@ export function openBrowserPrintWindow(
     <title>Receipt Print</title>
     <style>
       @page { margin: 0; size: ${pageWidth} auto; }
-      body { margin: 0; padding: 8mm 4mm; background: #ffffff; color: #111827; }
+      body { margin: 0; padding: 2mm; background: #ffffff; color: #000; display: flex; justify-content: center; }
       pre {
         margin: 0;
-        white-space: pre-wrap;
-        font-family: "Courier New", monospace;
-        font-size: ${fontSize};
-        line-height: 1.45;
+        white-space: pre;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: calc((${pageWidth} - 4mm) / ${layout.itemsPerLine} * 1.6);
+        line-height: 1.2;
+        max-width: 100%;
+        overflow: hidden;
       }
     </style>
   </head>
@@ -1009,7 +1090,7 @@ export function openBrowserPrintWindow(
 export async function sendPrintData(
   content: string,
   config: PrinterConfig,
-  layout: BillLayoutConfig = getBillLayoutConfig()
+  layout: BillLayoutConfig = getBillLayoutConfig(),
 ): Promise<boolean> {
   const lines = content.split(/\r?\n/);
   const data = new TextEncoder().encode(generateEscPos(lines, layout));
@@ -1041,9 +1122,14 @@ export async function printReceipt(
   bill: PrintableBillData,
   billNumber: string,
   printerConfig: PrinterConfig = getPrinterConfig(),
-  layout: BillLayoutConfig = getBillLayoutConfig()
+  layout: BillLayoutConfig = getBillLayoutConfig(),
 ): Promise<PrintTransportResult> {
-  const content = buildReceiptText(bill, billNumber, layout, bill.paymentMethod);
+  const content = buildReceiptText(
+    bill,
+    billNumber,
+    layout,
+    bill.paymentMethod,
+  );
   const printedToDevice = await sendPrintData(content, printerConfig, layout);
 
   if (printedToDevice) {
@@ -1061,7 +1147,3 @@ export async function printReceipt(
 
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
 }
-
-
-
-
