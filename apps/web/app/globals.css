@@ -8,8 +8,15 @@
   }
 
   body {
-    @apply bg-background text-on-background min-h-screen selection:bg-primary-fixed;
-    background: linear-gradient(135deg, #f7f1e7 0%, #f1e5d4 100%);
+    @apply bg-background text-on-background min-h-screen selection:bg-primary-fixed antialiased;
+    /* Soft, luxury mesh-like animated dynamic gradient */
+    background: radial-gradient(at 0% 0%, rgba(247, 241, 231, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(241, 229, 212, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(230, 223, 212, 0.8) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(255, 249, 238, 1) 0px, transparent 50%);
+    background-color: #f7f1e7;
+    background-attachment: fixed;
+    animation: ambient-shift 20s ease-in-out infinite alternate;
   }
 
   button,
@@ -20,17 +27,22 @@
   }
 }
 
+@keyframes ambient-shift {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
 @layer components {
   .ops-strip {
     @apply mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3 md:mb-8 md:gap-4;
   }
 
   .ops-card {
-    @apply rounded-2xl border border-outline-variant/20 bg-[rgba(255,251,245,0.9)] px-4 py-4 shadow-sm backdrop-blur sm:px-5;
+    @apply rounded-2xl border border-white/50 bg-white/60 px-4 py-4 shadow-[0_8px_30px_rgb(0,0,0,0.03)] backdrop-blur-xl transition hover:bg-white/80 hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] sm:px-5;
   }
 
   .ops-label {
-    @apply block text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container/80;
+    @apply block text-[10px] font-bold uppercase tracking-[0.25em] text-on-secondary-container/80;
   }
 
   .ops-help {
@@ -50,7 +62,7 @@
   }
 
   .panel {
-    @apply rounded-[28px] border border-outline-variant/20 bg-[rgba(255,255,255,0.82)] p-4 shadow-sm backdrop-blur md:p-6;
+    @apply rounded-[28px] border border-white/60 bg-white/70 p-4 shadow-[0_20px_60px_rgb(0,0,0,0.04)] backdrop-blur-2xl md:p-6;
   }
 
   .panel-heading {
@@ -62,11 +74,11 @@
   }
 
   .eyebrow {
-    @apply mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container;
+    @apply mb-1 text-[10px] font-bold uppercase tracking-[0.25em] text-on-secondary-container;
   }
 
   .text-input {
-    @apply w-full rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-sm transition focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-2xl border border-white/60 bg-white/50 px-4 py-3 text-sm text-on-surface shadow-[0_2px_10px_rgb(0,0,0,0.02)] backdrop-blur-md transition-all focus:border-primary/40 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-4 md:text-base;
   }
 
   .panel-options {
@@ -74,23 +86,23 @@
   }
 
   .button {
-    @apply inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold tracking-wide transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .button-small {
-    @apply min-h-11 px-4 py-2.5 text-xs uppercase tracking-[0.18em] md:text-sm md:tracking-[0.12em];
+    @apply min-h-11 px-4 py-2.5 text-xs uppercase tracking-[0.2em] md:text-sm md:tracking-[0.15em];
   }
 
   .button-primary {
-    @apply bg-primary text-on-primary shadow-lg shadow-primary/15 hover:bg-primary-container;
+    @apply bg-primary text-on-primary shadow-[0_8px_20px_rgba(119,68,32,0.25)] hover:bg-primary-container hover:shadow-[0_12px_25px_rgba(119,68,32,0.4)];
   }
 
   .button-secondary {
-    @apply border border-outline-variant/40 bg-surface-container-low text-on-surface hover:bg-surface-container-high;
+    @apply border border-white/60 bg-white/50 text-on-surface shadow-[0_4px_12px_rgb(0,0,0,0.02)] backdrop-blur-lg hover:border-white hover:bg-white;
   }
 
   .button-ghost {
-    @apply bg-transparent text-on-secondary-container hover:bg-surface-container-high hover:text-primary;
+    @apply bg-transparent text-on-secondary-container hover:bg-white/40 hover:text-primary;
   }
 
   .badge {
@@ -98,15 +110,15 @@
   }
 
   .badge-muted {
-    @apply bg-surface-container-high text-on-secondary-container;
+    @apply bg-surface-container-high/60 backdrop-blur-md text-on-secondary-container;
   }
 
   .success-text {
-    @apply mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm;
+    @apply mt-4 rounded-2xl border border-emerald-200/50 bg-emerald-50/80 backdrop-blur-lg px-4 py-3 text-sm text-emerald-800 shadow-[0_8px_30px_rgba(16,185,129,0.08)];
   }
 
   .error-card {
-    @apply mt-4 flex flex-col gap-3 rounded-3xl border border-error/15 bg-error-container/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between;
+    @apply mt-4 flex flex-col gap-3 rounded-3xl border border-error/15 bg-error-container/80 backdrop-blur-lg p-4 shadow-[0_8px_30px_rgba(186,26,26,0.08)] sm:flex-row sm:items-center sm:justify-between;
   }
 
   .error-text {
@@ -114,11 +126,11 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#311300]/60 p-3 backdrop-blur-sm sm:items-center sm:p-4;
+    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#311300]/40 p-3 backdrop-blur-md sm:items-center sm:p-4;
   }
 
   .modal-card {
-    @apply max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-outline-variant/20 bg-surface-container-low p-4 shadow-[0_40px_80px_rgba(49,19,0,0.18)] sm:p-6 md:p-8;
+    @apply max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/40 bg-white/80 p-4 shadow-[0_40px_100px_rgba(49,19,0,0.2)] backdrop-blur-2xl sm:p-6 md:p-8;
   }
 
   .inventory-form {
@@ -132,8 +144,7 @@
 
 @layer utilities {
   .glass-panel {
-    background: rgba(255, 251, 245, 0.92);
-    backdrop-filter: blur(10px);
+    @apply bg-white/80 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
   }
 
   .hide-scrollbar {
@@ -146,7 +157,7 @@
   }
 
   .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   }
   
   /* Connection status badges for Printer Settings */
@@ -155,27 +166,27 @@
   }
 
   .connection-badge.disconnected {
-    @apply bg-surface-container-high text-on-surface-variant opacity-60;
+    @apply bg-surface-container-high/60 backdrop-blur-md text-on-surface-variant opacity-60;
   }
 
   .connection-badge.bluetooth {
-    @apply bg-blue-100 text-blue-700;
+    @apply bg-blue-100/80 backdrop-blur-md text-blue-800 border border-blue-200/50;
   }
 
   .connection-badge.usb {
-    @apply bg-emerald-100 text-emerald-700;
+    @apply bg-emerald-100/80 backdrop-blur-md text-emerald-800 border border-emerald-200/50;
   }
 
   /* Settings message types */
   .settings-message-success {
-    @apply bg-emerald-100 text-emerald-800 px-4 py-3 text-sm border-b border-emerald-200;
+    @apply bg-emerald-100/90 backdrop-blur-xl text-emerald-800 px-4 py-3 text-sm border-b border-emerald-200/50;
   }
 
   .settings-message-error {
-    @apply bg-error-container text-error px-4 py-3 text-sm border-b border-error/20;
+    @apply bg-error-container/90 backdrop-blur-xl text-error px-4 py-3 text-sm border-b border-error/20;
   }
 
   .settings-message-info {
-    @apply bg-amber-100 text-amber-800 px-4 py-3 text-sm border-b border-amber-200;
+    @apply bg-amber-100/90 backdrop-blur-xl text-amber-800 px-4 py-3 text-sm border-b border-amber-200/50;
   }
 }

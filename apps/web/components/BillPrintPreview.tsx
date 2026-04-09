@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { DEFAULT_BILL_LAYOUT, getBillLayoutConfig } from "../lib/printer";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
@@ -24,8 +25,19 @@ export function BillPrintPreview({
   const receiptWidthClass = layout.paperWidth <= 58 ? "sm:max-w-[22rem]" : layout.paperWidth >= 110 ? "sm:max-w-[32rem]" : "sm:max-w-md";
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#311300]/60 p-4 backdrop-blur-sm">
-      <div className={`relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest shadow-[0_40px_80px_rgba(49,19,0,0.2)] ${receiptWidthClass}`}>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-[#311300]/40 p-4 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ y: 50, opacity: 0, scale: 0.95 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 20, opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className={`relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-[28px] border border-white/60 bg-surface-container-lowest shadow-[0_40px_100px_rgba(49,19,0,0.2)] ${receiptWidthClass}`}
+      >
         <div className="relative -mb-2 flex h-6 justify-center gap-2 overflow-hidden bg-surface-container-lowest pt-2">
           <div className="absolute top-0 flex h-2 w-full justify-between space-x-[2px] bg-transparent">
             {[...Array(30)].map((_, index) => (
@@ -182,7 +194,7 @@ export function BillPrintPreview({
             Save without printing
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

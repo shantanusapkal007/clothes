@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "framer-motion": "^12.38.0",
     "html5-qrcode": "^2.3.8",
     "next": "^15.0.0",
     "react": "^19.0.0",

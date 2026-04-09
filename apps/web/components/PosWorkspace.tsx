@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { CartPanel } from "./CartPanel";
 import { CreateProductModal } from "./CreateProductModal";
 import { ProductGrid } from "./ProductGrid";
@@ -14,6 +15,8 @@ import { parseBarcodeData, type BarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
 import { getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
 import type { Product } from "../types";
+
+import { ProductSkeleton } from "./Skeleton";
 
 export type BillDataWithProducts = Omit<ReturnType<typeof calculateCheckout>, "items"> & {
   items: Array<{
@@ -299,7 +302,6 @@ export function PosWorkspace() {
                 <p className="eyebrow">Search</p>
                 <h2>Fast product lookup</h2>
               </div>
-              {loading ? <span className="badge badge-muted">Loading</span> : null}
             </div>
             <input
               className="text-input"
@@ -309,7 +311,15 @@ export function PosWorkspace() {
             />
           </section>
 
-          <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
+          {loading ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
+          )}
         </div>
 
         <div className="workspace-right">
@@ -352,6 +362,7 @@ export function PosWorkspace() {
         </div>
       ) : null}
 
+      <AnimatePresence>
       {billPreviewOpen && billData ? (
         <BillPrintPreview
           bill={billData}
@@ -368,10 +379,13 @@ export function PosWorkspace() {
           }}
         />
       ) : null}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {printerSettingsOpen ? (
         <PrinterSettings onClose={() => setPrinterSettingsOpen(false)} />
       ) : null}
+      </AnimatePresence>
 
       <CreateProductModal
         barcode={createBarcode}

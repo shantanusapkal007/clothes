@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   DEFAULT_BILL_LAYOUT,
@@ -286,9 +287,20 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
         : "bg-amber-100 text-amber-800";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#311300]/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-surface-container-low shadow-[0_40px_80px_rgba(49,19,0,0.15)] ring-1 ring-outline-variant/30">
-        <div className="border-b border-outline-variant/20 bg-surface-container-lowest px-6 pb-6 pt-8 md:px-10">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#311300]/40 p-4 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ y: 50, opacity: 0, scale: 0.95 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 20, opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-surface-container-low shadow-[0_40px_100px_rgba(49,19,0,0.2)] border border-white/60 bg-white/80 backdrop-blur-xl"
+      >
+        <div className="border-b border-white/40 bg-white/50 px-6 pb-6 pt-8 md:px-10 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="font-serif text-3xl font-bold tracking-tight text-primary md:text-4xl">
@@ -826,7 +838,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
             </form>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

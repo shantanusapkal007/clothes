@@ -28,6 +28,8 @@ const DEFAULT_FORM: FormState = {
   taxPercent: 5
 };
 
+import { InventorySkeleton } from "./Skeleton";
+
 export function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
@@ -259,9 +261,7 @@ export function InventoryManager() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20 opacity-50">
-            <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
-          </div>
+          <InventorySkeleton />
         ) : visibleProducts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 p-8 text-center text-secondary">
             <span className="material-symbols-outlined mb-4 text-4xl opacity-50">inventory_2</span>

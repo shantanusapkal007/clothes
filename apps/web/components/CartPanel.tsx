@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState } from "react";
 import { useCartStore } from "../lib/cart-store";
 import { calculateCart } from "../lib/cart-calculations";
@@ -28,7 +29,7 @@ export function CartPanel({
   };
 
   return (
-    <div className="glass-panel flex h-full flex-col rounded-[28px] border border-outline-variant/20 p-4 shadow-sm md:p-6 xl:sticky xl:top-24">
+    <div className="glass-panel flex h-full flex-col p-4 md:p-6 xl:sticky xl:top-24">
       <div className="flex justify-between items-center mb-6 md:mb-8">
         <h3 className="font-headline text-xl md:text-2xl font-bold flex items-center gap-2">
           Checkout
@@ -52,33 +53,46 @@ export function CartPanel({
       </div>
 
       {items.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center opacity-50 py-12">
-          <span className="material-symbols-outlined text-4xl mb-2">shopping_basket</span>
-          <p className="text-sm">Cart is empty</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          className="flex-1 flex flex-col items-center justify-center opacity-50 py-12"
+        >
+          <span className="material-symbols-outlined text-5xl mb-3 opacity-80">shopping_basket</span>
+          <p className="text-sm font-bold tracking-widest uppercase">Cart is empty</p>
+        </motion.div>
       ) : (
         <>
           {/* Cart Items */}
-          <div className="mb-6 max-h-[42vh] flex-1 space-y-4 overflow-y-auto pr-1 md:mb-8 md:max-h-[50vh] md:space-y-6">
+          <div className="mb-6 max-h-[42vh] flex-1 space-y-4 overflow-y-auto pr-1 md:mb-8 md:max-h-[50vh] md:space-y-6 hide-scrollbar">
+            <AnimatePresence>
             {items.map((item) => (
-              <div key={item.productId} className="group rounded-2xl border border-outline-variant/15 bg-surface-container-low/35 p-3 md:gap-4">
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, height: 0, overflow: 'hidden' }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                key={item.productId} 
+                className="group rounded-2xl border border-white/60 bg-white/40 p-4 shadow-[0_4px_15px_rgb(0,0,0,0.02)] backdrop-blur-md md:gap-4"
+              >
                 {(() => {
                   const line = lineMap.get(item.productId);
 
                   return (
                     <>
                       <div className="sm:flex sm:gap-3">
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-surface-container-low flex-shrink-0 overflow-hidden ring-1 ring-outline-variant/20">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-container-low flex-shrink-0 overflow-hidden ring-1 ring-white/50 shadow-sm">
                   <img
                     alt={item.name}
                     src={getProductImage(item.name)}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover mix-blend-multiply opacity-90"
                   />
                 </div>
                 <div className="mt-3 min-w-0 flex-1 sm:mt-0">
                   <div className="flex justify-between gap-2">
-                    <h5 className="font-semibold text-on-background truncate text-sm md:text-base">{item.name}</h5>
-                    <p className="font-headline font-bold text-sm md:text-base shrink-0">
+                    <h5 className="font-semibold text-on-surface truncate text-sm md:text-base">{item.name}</h5>
+                    <p className="font-headline font-bold text-sm md:text-base shrink-0 text-primary">
                       Rs {(item.price).toFixed(2)}
                     </p>
                   </div>
@@ -86,9 +100,9 @@ export function CartPanel({
                     <p className="truncate text-[10px] font-medium uppercase tracking-widest text-secondary md:text-xs">
                       {item.barcode ? `SKU: ${item.barcode}` : 'NO SKU'}
                     </p>
-                    <div className="flex items-center gap-2 md:gap-3 bg-surface-container-low p-1 rounded-full ring-1 ring-outline-variant/20">
+                    <div className="flex items-center gap-2 md:gap-3 bg-white/60 p-1.5 rounded-full ring-1 ring-white/40 shadow-sm">
                       <button
-                        className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors"
+                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-surface-container-low transition-colors"
                         onClick={() => {
                           if (item.quantity <= 1) {
                             removeItem(item.productId);
@@ -97,36 +111,36 @@ export function CartPanel({
                           }
                         }}
                       >
-                        <span className="material-symbols-outlined text-[14px] md:text-[16px]">remove</span>
+                        <span className="material-symbols-outlined text-[16px] md:text-[18px]">remove</span>
                       </button>
-                      <span className="font-bold w-4 text-center text-xs md:text-sm">{item.quantity}</span>
+                      <span className="font-bold w-6 text-center text-xs md:text-sm">{item.quantity}</span>
                       <button
-                        className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors"
+                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-surface-container-low transition-colors"
                         onClick={() => updateItem(item.productId, "quantity", item.quantity + 1)}
                       >
-                        <span className="material-symbols-outlined text-[14px] md:text-[16px]">add</span>
+                        <span className="material-symbols-outlined text-[16px] md:text-[18px]">add</span>
                       </button>
                     </div>
                   </div>
                   {/* Optional mobile-only price + discount inputs */}
                   {(item.discountPercent > 0 || item.taxPercent > 0) && (
-                    <div className="flex gap-2 mt-1 text-[10px] text-secondary">
-                      {item.discountPercent > 0 && <span>-{item.discountPercent}%</span>}
-                      {item.taxPercent > 0 && <span>+{item.taxPercent}% tax</span>}
+                    <div className="flex gap-2 mt-2 text-[10px] uppercase font-bold tracking-widest text-secondary">
+                      {item.discountPercent > 0 && <span className="bg-emerald-100/80 text-emerald-800 px-2 py-0.5 rounded-full backdrop-blur-md">-{item.discountPercent}%</span>}
+                      {item.taxPercent > 0 && <span className="bg-amber-100/80 text-amber-800 px-2 py-0.5 rounded-full backdrop-blur-md">+{item.taxPercent}% tax</span>}
                     </div>
                   )}
                 </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                        <label className="rounded-2xl bg-white/70 p-3">
+                        <label className="rounded-[20px] bg-white/70 p-3 ring-1 ring-white/40 shadow-sm transition hover:bg-white">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Price
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-secondary">Rs</span>
+                            <span className="text-xs text-secondary font-bold">Rs</span>
                             <input
-                              className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                              className="w-full border-none bg-transparent p-0 text-right font-headline text-lg font-bold focus:ring-0 text-primary"
                               type="number"
                               min={0}
                               step="0.01"
@@ -142,17 +156,17 @@ export function CartPanel({
                           </div>
                         </label>
 
-                        <div className="rounded-2xl bg-white/70 p-3">
+                        <div className="rounded-[20px] bg-white/70 p-3 ring-1 ring-white/40 shadow-sm transition hover:bg-white">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Discount
                           </span>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] ${
+                              className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.15em] shrink-0 transition ${
                                 item.discountPercent === 10
-                                  ? "bg-primary text-on-primary"
-                                  : "bg-primary-fixed text-on-primary-fixed"
+                                  ? "bg-primary text-on-primary shadow-sm scale-105"
+                                  : "bg-surface-container-high/60 text-secondary hover:bg-white"
                               }`}
                               onClick={() =>
                                 updateItem(
@@ -165,7 +179,7 @@ export function CartPanel({
                               10%
                             </button>
                             <input
-                              className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                              className="w-full border-none bg-transparent p-0 text-right font-headline text-lg font-bold focus:ring-0 text-primary"
                               type="number"
                               min={0}
                               max={100}
@@ -182,12 +196,12 @@ export function CartPanel({
                           </div>
                         </div>
 
-                        <label className="rounded-2xl bg-white/70 p-3">
+                        <label className="rounded-[20px] bg-white/70 p-3 ring-1 ring-white/40 shadow-sm transition hover:bg-white">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Tax %
                           </span>
                           <input
-                            className="w-full border-none bg-transparent p-0 text-right font-semibold focus:ring-0"
+                            className="w-full border-none bg-transparent p-0 text-right font-headline text-lg font-bold focus:ring-0 text-primary"
                             type="number"
                             min={0}
                             max={100}
@@ -203,16 +217,16 @@ export function CartPanel({
                           />
                         </label>
 
-                        <div className="rounded-2xl bg-primary/5 p-3">
+                        <div className="rounded-[20px] bg-primary/5 p-3 ring-1 ring-primary/10 shadow-sm">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Line total
                           </span>
-                          <div className="text-right">
-                            <div className="font-headline text-lg font-bold text-on-background">
+                          <div className="text-right flex flex-col justify-end h-full mt-auto">
+                            <div className="font-headline text-lg font-bold text-primary">
                               Rs {line?.total.toFixed(2) ?? "0.00"}
                             </div>
                             {line && line.discountAmount > 0 ? (
-                              <div className="text-[10px] text-emerald-700">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mt-1">
                                 Saved Rs {line.discountAmount.toFixed(2)}
                               </div>
                             ) : null}
@@ -222,8 +236,9 @@ export function CartPanel({
                     </>
                   );
                 })()}
-              </div>
+              </motion.div>
             ))}
+            </AnimatePresence>
           </div>
 
           {/* Payment & Checkout */}
