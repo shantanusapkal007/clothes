@@ -25,7 +25,7 @@ export function buildWhatsAppBillMessage(
 ) {
   const lines: string[] = [];
 
-  lines.push(`${billLayout.companyName || "Friends Clothing"} Bill`);
+  lines.push(`${billLayout.companyName || "Friends Boutique"} Bill`);
   lines.push(`Bill No: ${billNumber}`);
   lines.push(`Payment: ${paymentMethod.toUpperCase()}`);
   lines.push(`Date: ${new Date().toLocaleString()}`);

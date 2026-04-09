@@ -22,7 +22,7 @@ export function Navigation() {
       <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center justify-between border-b border-[#e9e1d7] bg-[#fbf9f5]/90 px-3 shadow-sm backdrop-blur-md sm:px-4 md:px-8">
         <div className="flex min-w-0 items-center gap-3 md:gap-12">
           <h1 className="truncate text-lg font-serif tracking-tight text-[#774420] sm:text-xl md:text-2xl">
-            FRIENDS
+            FRIENDS BOUTIQUE
           </h1>
           <nav className="hidden md:flex items-center gap-8 h-16">
             <Link 
@@ -128,7 +128,7 @@ export function Navigation() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-white/50 p-1">
               <img
-                alt="Atelier Friends Logo"
+                alt="Friends Boutique Logo"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD9UG5Ct8w_kKziztfse4IyC1DLiguLbWyp9UjS_mq9n_YeSdgCQ4MFoJ0fyXK9G4-kh-mx5gbiMV4Ve1vOv93N4jWM3Kur_Rr7WF8OZok2gMkQgXdbjCHnxiHNbuPc74EEltnGLNQk3NhsMcqzqZkExsA8XEzvyW5h8mPouvA5epdwInq9D5tKTtjPBUtl6S5irh4mQFSLIbCZnWJLkZN6vwPmG049ZD7jp1LZ7iUqmaeCHmWT0yqKI14H0CRUNz8dwRBzv3_KbE"
                 className="w-full h-full object-cover rounded-full"
               />

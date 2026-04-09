@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Friends Clothing POS",
+  title: "Friends Boutique POS",
   description: "Fast clothing store POS with editable pricing, stock, tax, and discount."
 };
 

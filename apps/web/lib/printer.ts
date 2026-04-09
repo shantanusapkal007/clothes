@@ -100,7 +100,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
 };
 
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
-  companyName: "Friends Clothing",
+  companyName: "Friends Boutique",
   showItemDetails: true,
   showTaxBreakdown: true,
   showDiscountBreakdown: true,
