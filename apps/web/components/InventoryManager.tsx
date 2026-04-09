@@ -25,7 +25,7 @@ const DEFAULT_FORM: FormState = {
   stock: 0,
   minStock: 2,
   discountPercent: 0,
-  taxPercent: 5
+  taxPercent: 0
 };
 
 import { InventorySkeleton } from "./Skeleton";
@@ -222,6 +222,40 @@ export function InventoryManager() {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                Default Discount %
+              </label>
+              <input
+                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                placeholder="0"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.discountPercent === 0 ? "" : form.discountPercent}
+                onChange={(e) => setForm({ ...form, discountPercent: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                Tax %
+              </label>
+              <input
+                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                placeholder="0"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.taxPercent === 0 ? "" : form.taxPercent}
+                onChange={(e) => setForm({ ...form, taxPercent: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+
 
           <button
             type="submit"

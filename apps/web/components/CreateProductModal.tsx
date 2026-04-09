@@ -163,6 +163,32 @@ export function CreateProductModal({
                     }
                   />
                 </div>
+                <div className="inventory-grid mt-3">
+                  <input
+                    className="text-input"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    placeholder="Default Discount %"
+                    value={form.discountPercent === 0 ? "" : form.discountPercent}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, discountPercent: Number(event.target.value) }))
+                    }
+                  />
+                  <input
+                    className="text-input"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    placeholder="Tax %"
+                    value={form.taxPercent === 0 ? "" : form.taxPercent}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, taxPercent: Number(event.target.value) }))
+                    }
+                  />
+                </div>
               </section>
 
               {error ? <p className="error-text">{error}</p> : null}
