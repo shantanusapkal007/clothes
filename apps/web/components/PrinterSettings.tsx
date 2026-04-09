@@ -7,13 +7,20 @@ import {
   buildReceiptText,
   connectBluetoothPrinter,
   disconnectBluetoothPrinter,
+  disconnectSerialPrinter,
+  getAvailableBluetoothPrinters,
+  getAvailableSerialPrinters,
   getAvailableUsbPrinters,
   getBillLayoutConfig,
   getPrinterConfig,
   isBluetoothAvailable,
+  isRawBtAvailable,
+  isSerialAvailable,
+  isUsbAvailable,
   normalizeBillLayoutConfig,
   openBrowserPrintWindow,
   requestBluetoothPrinter,
+  requestSerialPrinter,
   requestUsbPrinter,
   saveBillLayoutConfig,
   savePrinterConfig,
@@ -32,15 +39,24 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
   const [activeTab, setActiveTab] = useState<"printer" | "layout">("printer");
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
-  const [availablePrinters, setAvailablePrinters] = useState<PrinterConfig[]>([]);
+  const [availableUsbPrinters, setAvailableUsbPrinters] = useState<PrinterConfig[]>([]);
+  const [availableSerialPrinters, setAvailableSerialPrinters] = useState<PrinterConfig[]>([]);
+  const [availableBluetoothPrinters, setAvailableBluetoothPrinters] = useState<PrinterConfig[]>([]);
   const [testPrintPending, setTestPrintPending] = useState(false);
+  const [usbAvailable, setUsbAvailable] = useState(false);
+  const [serialAvailable, setSerialAvailable] = useState(false);
   const [btAvailable, setBtAvailable] = useState(false);
+  const [rawbtAvailable, setRawbtAvailable] = useState(false);
   const [btConnecting, setBtConnecting] = useState(false);
+  const [serialConnecting, setSerialConnecting] = useState(false);
 
   useEffect(() => {
     setPrinterConfig(getPrinterConfig());
     setBillLayout(getBillLayoutConfig());
+    setUsbAvailable(isUsbAvailable());
+    setSerialAvailable(isSerialAvailable());
     setBtAvailable(isBluetoothAvailable());
+    setRawbtAvailable(isRawBtAvailable());
     void loadAvailablePrinters();
   }, []);
 
@@ -52,10 +68,33 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
 
   const loadAvailablePrinters = async () => {
     try {
-      const printers = await getAvailableUsbPrinters();
-      setAvailablePrinters(printers);
+      const [usbPrinters, serialPrinters, bluetoothPrinters] = await Promise.all([
+        getAvailableUsbPrinters(),
+        getAvailableSerialPrinters(),
+        getAvailableBluetoothPrinters()
+      ]);
+
+      setAvailableUsbPrinters(usbPrinters);
+      setAvailableSerialPrinters(serialPrinters);
+      setAvailableBluetoothPrinters(bluetoothPrinters);
     } catch {
-      setAvailablePrinters([]);
+      try {
+        setAvailableUsbPrinters(await getAvailableUsbPrinters());
+      } catch {
+        setAvailableUsbPrinters([]);
+      }
+
+      try {
+        setAvailableSerialPrinters(await getAvailableSerialPrinters());
+      } catch {
+        setAvailableSerialPrinters([]);
+      }
+
+      try {
+        setAvailableBluetoothPrinters(await getAvailableBluetoothPrinters());
+      } catch {
+        setAvailableBluetoothPrinters([]);
+      }
     }
   };
 
@@ -71,6 +110,11 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
   };
 
   const handleRequestUsbPrinter = async () => {
+    if (!usbAvailable) {
+      showMessage("USB printing requires Chrome/Edge over HTTPS (or localhost).", "error");
+      return;
+    }
+
     try {
       const printer = await requestUsbPrinter();
       if (!printer) {
@@ -86,6 +130,33 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
       showMessage("USB printer connected successfully", "success");
     } catch {
       showMessage("Failed to connect USB printer", "error");
+    }
+  };
+
+  const handleRequestSerialPrinter = async () => {
+    if (!serialAvailable) {
+      showMessage("Serial printing is available only in desktop Chrome/Edge over HTTPS.", "error");
+      return;
+    }
+
+    setSerialConnecting(true);
+    try {
+      const printer = await requestSerialPrinter(printerConfig.serialBaudRate ?? 9600);
+      if (!printer) {
+        showMessage("No serial printer selected", "error");
+        return;
+      }
+
+      updatePrinter({
+        ...printer,
+        width: billLayout.paperWidth
+      });
+      await loadAvailablePrinters();
+      showMessage("Serial printer connected successfully", "success");
+    } catch {
+      showMessage("Failed to connect serial printer", "error");
+    } finally {
+      setSerialConnecting(false);
     }
   };
 
@@ -115,6 +186,19 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
       showMessage("Failed to connect Bluetooth printer", "error");
     } finally {
       setBtConnecting(false);
+    }
+  };
+
+  const handleDisconnectSerial = async () => {
+    try {
+      await disconnectSerialPrinter();
+    } finally {
+      updatePrinter({
+        ...DEFAULT_PRINTER_CONFIG,
+        width: printerConfig.width,
+        name: printerConfig.name || DEFAULT_PRINTER_CONFIG.name
+      });
+      showMessage("Serial printer disconnected", "info");
     }
   };
 
@@ -322,7 +406,71 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                               : "Connect Bluetooth"}
                         </span>
                         <span className="block text-[10px] font-medium uppercase tracking-wider text-on-secondary-container md:text-xs">
-                          Wireless POS printer
+                          BLE POS printer
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={
+                        printerConfig.connectionType === "serial" && printerConfig.connected
+                          ? handleDisconnectSerial
+                          : handleRequestSerialPrinter
+                      }
+                      type="button"
+                      disabled={!serialAvailable || serialConnecting}
+                      className={`flex flex-col items-center gap-3 rounded-xl border-2 bg-surface-container-highest p-4 transition-all hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 md:p-6 ${
+                        printerConfig.connectionType === "serial" && printerConfig.connected
+                          ? "border-purple-500 bg-purple-50"
+                          : "border-transparent hover:bg-secondary-container"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-3xl text-on-surface-variant md:text-4xl">cable</span>
+                      <div className="text-center">
+                        <span className="mb-1 block text-sm font-bold md:text-base">
+                          {printerConfig.connectionType === "serial" && printerConfig.connected
+                            ? "Disconnect Serial"
+                            : serialConnecting
+                              ? "Scanning..."
+                              : "Connect Serial"}
+                        </span>
+                        <span className="block text-[10px] font-medium uppercase tracking-wider text-on-secondary-container md:text-xs">
+                          USB-serial / COM port
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        updatePrinter({
+                          ...DEFAULT_PRINTER_CONFIG,
+                          name: "RawBT Bluetooth Printer",
+                          connectionType: "rawbt",
+                          width: billLayout.paperWidth,
+                          connected: true
+                        });
+                        showMessage(
+                          "RawBT bridge enabled. Make sure the RawBT app is installed and your Bluetooth printer is paired in it.",
+                          "success"
+                        );
+                      }}
+                      type="button"
+                      disabled={!rawbtAvailable}
+                      className={`flex flex-col items-center gap-3 rounded-xl border-2 bg-surface-container-highest p-4 transition-all hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 md:p-6 ${
+                        printerConfig.connectionType === "rawbt" && printerConfig.connected
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-transparent hover:bg-secondary-container"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-3xl text-on-surface-variant md:text-4xl">print_connect</span>
+                      <div className="text-center">
+                        <span className="mb-1 block text-sm font-bold md:text-base">
+                          {printerConfig.connectionType === "rawbt" && printerConfig.connected
+                            ? "RawBT Active \u2713"
+                            : "Connect via RawBT"}
+                        </span>
+                        <span className="block text-[10px] font-medium uppercase tracking-wider text-on-secondary-container md:text-xs">
+                          Android BT bridge app
                         </span>
                       </div>
                     </button>
@@ -372,8 +520,12 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                         {printerConfig.connectionType === "usb"
                           ? "USB interface active"
                           : printerConfig.connectionType === "bluetooth"
-                            ? "Bluetooth printer selected"
-                            : "Use browser print until a printer is connected"}
+                            ? "Bluetooth BLE printer selected"
+                            : printerConfig.connectionType === "serial"
+                              ? "Serial COM port active"
+                              : printerConfig.connectionType === "rawbt"
+                                ? "RawBT Android bridge \u2014 pair your printer in the RawBT app"
+                                : "Use browser print until a printer is connected"}
                       </p>
                     </div>
                     <button
@@ -394,28 +546,71 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
               <div className="flex flex-col gap-6 md:col-span-5">
                 <div className="rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-inner md:p-8">
                   <span className="mb-6 block text-[10px] font-bold uppercase tracking-widest text-on-secondary-container">
-                    Detected USB printers
+                    Detected Devices
                   </span>
 
-                  {availablePrinters.length > 0 ? (
-                    <div className="space-y-3">
-                      {availablePrinters.map((printer) => (
-                        <div
-                          key={`${printer.vendorId}-${printer.productId}-${printer.deviceId}`}
-                          className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4"
-                        >
-                          <p className="font-semibold text-primary">{printer.name}</p>
-                          <p className="mt-1 text-xs text-on-secondary-container">
-                            Vendor {printer.vendorId || "-"} | Product {printer.productId || "-"}
-                          </p>
-                        </div>
-                      ))}
+                  {availableUsbPrinters.length > 0 ? (
+                    <div className="mb-4">
+                      <span className="mb-2 block text-[9px] font-bold uppercase tracking-wider text-emerald-700">USB</span>
+                      <div className="space-y-2">
+                        {availableUsbPrinters.map((printer) => (
+                          <div
+                            key={`usb-${printer.vendorId}-${printer.productId}-${printer.deviceId}`}
+                            className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4"
+                          >
+                            <p className="font-semibold text-primary">{printer.name}</p>
+                            <p className="mt-1 text-xs text-on-secondary-container">
+                              Vendor {printer.vendorId || "-"} | Product {printer.productId || "-"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
+                  ) : null}
+
+                  {availableSerialPrinters.length > 0 ? (
+                    <div className="mb-4">
+                      <span className="mb-2 block text-[9px] font-bold uppercase tracking-wider text-purple-700">Serial</span>
+                      <div className="space-y-2">
+                        {availableSerialPrinters.map((printer, index) => (
+                          <div
+                            key={`serial-${printer.vendorId}-${printer.productId}-${index}`}
+                            className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4"
+                          >
+                            <p className="font-semibold text-primary">{printer.name}</p>
+                            <p className="mt-1 text-xs text-on-secondary-container">
+                              Baud {printer.serialBaudRate || 9600}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {availableBluetoothPrinters.length > 0 ? (
+                    <div className="mb-4">
+                      <span className="mb-2 block text-[9px] font-bold uppercase tracking-wider text-blue-700">Bluetooth</span>
+                      <div className="space-y-2">
+                        {availableBluetoothPrinters.map((printer) => (
+                          <div
+                            key={`bt-${printer.bluetoothDeviceId}`}
+                            className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4"
+                          >
+                            <p className="font-semibold text-primary">{printer.name}</p>
+                            <p className="mt-1 text-xs text-on-secondary-container">
+                              ID {printer.bluetoothDeviceId || "-"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {availableUsbPrinters.length === 0 && availableSerialPrinters.length === 0 && availableBluetoothPrinters.length === 0 ? (
                     <p className="text-sm text-on-secondary-container">
-                      No previously approved USB printer is available in this browser yet.
+                      No previously approved printers found in this browser.{rawbtAvailable ? " Use RawBT for Android Bluetooth printing." : ""}
                     </p>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-6">
@@ -635,4 +830,3 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
     </div>
   );
 }
-

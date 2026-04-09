@@ -41,6 +41,10 @@ function describePrinterRoute() {
     return "Browser print fallback";
   }
 
+  if (printerConfig.connectionType === "rawbt") {
+    return "RawBT Android bridge";
+  }
+
   return `${printerConfig.connectionType.toUpperCase()} printer: ${printerConfig.name}`;
 }
 
@@ -157,6 +161,7 @@ export function PosWorkspace() {
       setError("Barcode not found. Create the product and continue.");
     }
   };
+
   const handleCreateProduct = async (payload: {
     name: string;
     category?: string;
@@ -381,6 +386,3 @@ export function PosWorkspace() {
     </>
   );
 }
-
-
-

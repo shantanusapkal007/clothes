@@ -1,9 +1,12 @@
 /**
  * Thermal Printer Integration
- * Supports ESC/POS protocol for thermal printers via USB and Bluetooth
+ * Supports ESC/POS protocol for thermal printers via:
+ * - WebUSB (direct USB printer)
+ * - Web Bluetooth (BLE/GATT printers only)
+ * - Web Serial (USB-serial adapters / Bluetooth SPP COM ports on desktop)
  */
 
-export type ConnectionType = "usb" | "bluetooth" | "none";
+export type ConnectionType = "usb" | "serial" | "bluetooth" | "rawbt" | "none";
 
 export interface PrinterConfig {
   name: string;
@@ -12,6 +15,7 @@ export interface PrinterConfig {
   vendorId?: string;
   productId?: string;
   bluetoothDeviceId?: string;
+  serialBaudRate?: number;
   width: number;
   connected: boolean;
 }
@@ -65,19 +69,28 @@ const USB_REQUEST_FILTERS = [
 ];
 
 const BT_PRINTER_SERVICE_UUIDS = [
-  "000018f0-0000-1000-8000-00805f9b34fb",
-  "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
-  "49535343-fe7d-4ae5-8fa9-9fafd205e455"
+  "000018f0-0000-1000-8000-00805f9b34fb", // Common ESC/POS printers
+  "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // Generic serial
+  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // Microchip ISSC / many BT printers
+  "0000ffe0-0000-1000-8000-00805f9b34fb", // BLE UART (FFE0)
+  "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART Service (NUS)
+  "0000fff0-0000-1000-8000-00805f9b34fb", // Common vendor UART
+  "0000ff00-0000-1000-8000-00805f9b34fb" // Common vendor UART
 ];
 
 const BT_PRINTER_CHAR_UUIDS = [
   "00002af1-0000-1000-8000-00805f9b34fb",
   "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f",
-  "49535343-8841-43f4-a8d4-ecbe34729bb3"
+  "49535343-8841-43f4-a8d4-ecbe34729bb3",
+  "0000ffe1-0000-1000-8000-00805f9b34fb", // BLE UART (FFE1)
+  "6e400002-b5a3-f393-e0a9-e50e24dcca9e", // NUS write
+  "0000fff1-0000-1000-8000-00805f9b34fb",
+  "0000ff01-0000-1000-8000-00805f9b34fb"
 ];
 
 let bluetoothDevice: any = null;
 let bluetoothCharacteristic: any = null;
+let serialPort: any = null;
 
 export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   name: "Thermal Printer",
@@ -403,8 +416,26 @@ export function generateEscPos(lines: string[], billLayout: BillLayoutConfig): s
   return commands;
 }
 
+export function isUsbAvailable(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof window !== "undefined" &&
+    window.isSecureContext &&
+    "usb" in navigator
+  );
+}
+
+export function isSerialAvailable(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof window !== "undefined" &&
+    window.isSecureContext &&
+    "serial" in navigator
+  );
+}
+
 export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
-  if (typeof navigator === "undefined" || !("usb" in navigator)) {
+  if (!isUsbAvailable()) {
     return [];
   }
 
@@ -425,7 +456,7 @@ export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
 }
 
 export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
-  if (typeof navigator === "undefined" || !("usb" in navigator)) {
+  if (!isUsbAvailable()) {
     return null;
   }
 
@@ -448,8 +479,261 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
   }
 }
 
+async function hydrateSerialPort(config?: PrinterConfig): Promise<any> {
+  if (serialPort) {
+    return serialPort;
+  }
+
+  if (!config) {
+    return null;
+  }
+
+  if (!isSerialAvailable()) {
+    return null;
+  }
+
+  const serialNavigator = (navigator as any).serial as {
+    getPorts?: () => Promise<any[]>;
+  };
+
+  if (typeof serialNavigator.getPorts !== "function") {
+    return null;
+  }
+
+  try {
+    const ports = await serialNavigator.getPorts();
+
+    if (!config.vendorId || !config.productId) {
+      return null;
+    }
+
+    const vendorId = Number(config.vendorId);
+    const productId = Number(config.productId);
+
+    if (!Number.isFinite(vendorId) || !Number.isFinite(productId)) {
+      return null;
+    }
+
+    const matched =
+      ports.find((port: any) => {
+        const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+        return info.usbVendorId === vendorId && info.usbProductId === productId;
+      }) ?? null;
+
+    serialPort = matched;
+    return matched;
+  } catch {
+    return null;
+  }
+}
+
+export async function getAvailableSerialPrinters(): Promise<PrinterConfig[]> {
+  if (!isSerialAvailable()) {
+    return [];
+  }
+
+  const serialNavigator = (navigator as any).serial as {
+    getPorts?: () => Promise<any[]>;
+  };
+
+  if (typeof serialNavigator.getPorts !== "function") {
+    return [];
+  }
+
+  try {
+    const ports = await serialNavigator.getPorts();
+
+    return ports.map((port: any, index: number) => {
+      const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+      const vendorId = info.usbVendorId ? String(info.usbVendorId) : undefined;
+      const productId = info.usbProductId ? String(info.usbProductId) : undefined;
+
+      const nameParts = ["Serial Printer"];
+      if (vendorId && productId) {
+        nameParts.push("VID " + vendorId + " PID " + productId);
+      } else {
+        nameParts.push("#" + (index + 1));
+      }
+
+      return {
+        name: nameParts.join(" "),
+        connectionType: "serial",
+        vendorId,
+        productId,
+        serialBaudRate: 9600,
+        width: 80,
+        connected: true
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function requestSerialPrinter(baudRate: number = 9600): Promise<PrinterConfig | null> {
+  if (!isSerialAvailable()) {
+    return null;
+  }
+
+  try {
+    const port = await (navigator as any).serial.requestPort();
+    serialPort = port;
+
+    const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+    const vendorId = info.usbVendorId ? String(info.usbVendorId) : undefined;
+    const productId = info.usbProductId ? String(info.usbProductId) : undefined;
+
+    const nameParts = ["Serial Printer"];
+    if (vendorId && productId) {
+      nameParts.push("VID " + vendorId + " PID " + productId);
+    }
+
+    return {
+      name: nameParts.join(" "),
+      connectionType: "serial",
+      vendorId,
+      productId,
+      serialBaudRate: baudRate,
+      width: 80,
+      connected: true
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function disconnectSerialPrinter(): Promise<void> {
+  const port = serialPort;
+  serialPort = null;
+
+  if (!port) {
+    return;
+  }
+
+  try {
+    if (typeof port.close === "function") {
+      await port.close();
+    }
+  } catch {
+    // Ignore close failures.
+  }
+}
+
+export async function sendSerialData(data: Uint8Array, config?: PrinterConfig): Promise<boolean> {
+  if (!isSerialAvailable()) {
+    return false;
+  }
+
+  const port = (await hydrateSerialPort(config)) ?? serialPort;
+  if (!port) {
+    return false;
+  }
+
+  try {
+    if (!port.writable) {
+      const baudRate = config?.serialBaudRate ?? 9600;
+      await port.open({ baudRate });
+    }
+
+    const writer = port.writable.getWriter();
+    const chunkSize = 256;
+    for (let offset = 0; offset < data.length; offset += chunkSize) {
+      await writer.write(data.slice(offset, offset + chunkSize));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    writer.releaseLock();
+    return true;
+  } catch {
+    try {
+      await disconnectSerialPrinter();
+    } catch {
+      // Ignore disconnect errors.
+    }
+    return false;
+  }
+}
 export function isBluetoothAvailable(): boolean {
-  return typeof navigator !== "undefined" && "bluetooth" in navigator;
+  return (
+    typeof navigator !== "undefined" &&
+    typeof window !== "undefined" &&
+    window.isSecureContext &&
+    "bluetooth" in navigator
+  );
+}
+
+/**
+ * Detect whether the device is likely running Android.
+ * RawBT is an Android app that bridges web apps to classic Bluetooth SPP
+ * thermal printers via the `rawbt:` URL scheme.
+ */
+export function isRawBtAvailable(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return /android/i.test(navigator.userAgent);
+}
+
+/**
+ * Returns a summary of which connection types the current browser supports.
+ */
+export function getAvailableConnectionTypes(): Record<string, boolean> {
+  return {
+    usb: isUsbAvailable(),
+    serial: isSerialAvailable(),
+    bluetooth: isBluetoothAvailable(),
+    rawbt: isRawBtAvailable()
+  };
+}
+
+/**
+ * Send ESC/POS data to a thermal printer via the RawBT Android app.
+ * RawBT registers the `rawbt:` URL scheme.  We encode the binary
+ * payload as base64 and open `rawbt:base64,<data>`.
+ */
+export function sendViaRawBt(data: Uint8Array): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    let binary = "";
+    for (let i = 0; i < data.length; i++) {
+      binary += String.fromCharCode(data[i]);
+    }
+    const encoded = btoa(binary);
+    window.location.href = `rawbt:base64,${encoded}`;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getAvailableBluetoothPrinters(): Promise<PrinterConfig[]> {
+  if (!isBluetoothAvailable()) {
+    return [];
+  }
+
+  const bluetoothNavigator = (navigator as any).bluetooth as {
+    getDevices?: () => Promise<any[]>;
+  };
+
+  if (typeof bluetoothNavigator.getDevices !== "function") {
+    return [];
+  }
+
+  try {
+    const devices = await bluetoothNavigator.getDevices();
+    return devices.map((device: any) => ({
+      name: device.name || "Bluetooth Printer",
+      connectionType: "bluetooth",
+      bluetoothDeviceId: device.id,
+      width: 80,
+      connected: false
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function hydrateBluetoothDevice(config?: PrinterConfig): Promise<any> {
@@ -528,6 +812,25 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
     }
 
     const services = await server.getPrimaryServices();
+
+    // Fallback: scan all accessible services for any writable characteristic.
+    for (const service of services) {
+      try {
+        const characteristics = await service.getCharacteristics();
+        const writable = characteristics.find(
+          (characteristic: any) =>
+            characteristic.properties.write || characteristic.properties.writeWithoutResponse
+        );
+        if (writable) {
+          bluetoothCharacteristic = writable;
+          return writable;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    // Last resort: try well-known characteristic UUIDs.
     for (const service of services) {
       for (const characteristicUuid of BT_PRINTER_CHAR_UUIDS) {
         try {
@@ -585,7 +888,7 @@ export function disconnectBluetoothPrinter(): void {
 }
 
 async function findUsbDevice(config: PrinterConfig): Promise<any> {
-  if (typeof navigator === "undefined" || !("usb" in navigator)) {
+  if (!isUsbAvailable()) {
     return null;
   }
 
@@ -623,8 +926,16 @@ async function writeUsbData(device: any, data: Uint8Array): Promise<boolean> {
         }
 
         await device.claimInterface(iface.interfaceNumber);
-        if (alternate.alternateSetting !== iface.alternate.alternateSetting) {
-          await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting);
+        try {
+          if (
+            typeof alternate.alternateSetting === "number" &&
+            iface.alternate &&
+            alternate.alternateSetting !== iface.alternate.alternateSetting
+          ) {
+            await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting);
+          }
+        } catch {
+          // Some devices do not support alternate selection.
         }
         await device.transferOut(endpoint.endpointNumber, data);
         await device.close();
@@ -703,11 +1014,15 @@ export async function sendPrintData(
   const lines = content.split(/\r?\n/);
   const data = new TextEncoder().encode(generateEscPos(lines, layout));
 
-  if (config.connectionType === "bluetooth" && config.connected) {
+  if (config.connectionType === "bluetooth") {
     return sendBluetoothData(data, config);
   }
 
-  if (config.connectionType === "usb" && config.connected) {
+  if (config.connectionType === "serial") {
+    return sendSerialData(data, config);
+  }
+
+  if (config.connectionType === "usb") {
     const device = await findUsbDevice(config);
     if (!device) {
       return false;
@@ -716,9 +1031,12 @@ export async function sendPrintData(
     return writeUsbData(device, data);
   }
 
+  if (config.connectionType === "rawbt") {
+    return sendViaRawBt(data);
+  }
+
   return false;
 }
-
 export async function printReceipt(
   bill: PrintableBillData,
   billNumber: string,
@@ -730,6 +1048,15 @@ export async function printReceipt(
 
   if (printedToDevice) {
     return "device";
+  }
+
+  // On Android, try the RawBT bridge before falling back to browser print.
+  if (isRawBtAvailable() && printerConfig.connectionType !== "rawbt") {
+    const lines = content.split(/\r?\n/);
+    const data = new TextEncoder().encode(generateEscPos(lines, layout));
+    if (sendViaRawBt(data)) {
+      return "device";
+    }
   }
 
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
