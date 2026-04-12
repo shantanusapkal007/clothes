@@ -4,8 +4,7 @@ export default function InventoryPage() {
   return (
     <main className="min-h-screen px-3 pb-10 pt-20 sm:px-4 md:ml-64 md:px-8 md:pb-12 md:pt-24">
       <div className="max-w-6xl mx-auto">
-        {/* Hero Banner */}
-        <header className="relative mb-6 flex min-h-[180px] flex-col justify-end overflow-hidden rounded-[28px] bg-primary-container p-5 shadow-lg sm:p-8 md:mb-12 md:min-h-[320px] md:p-12">
+        <header className="relative mb-5 flex min-h-[150px] flex-col justify-end overflow-hidden rounded-lg bg-primary-container p-4 shadow-lg sm:p-6 md:mb-8 md:min-h-[260px] md:p-10">
           <div className="absolute inset-0 z-0">
             <img
               alt="Boutique Interior"
@@ -19,7 +18,7 @@ export default function InventoryPage() {
             <span className="text-on-primary-container/80 font-bold tracking-[0.2em] text-xs md:text-sm mb-2 block uppercase">
               BACK OFFICE
             </span>
-            <h1 className="max-w-xl text-2xl leading-tight text-on-primary-container sm:text-3xl md:text-5xl font-serif">
+            <h1 className="max-w-xl text-2xl leading-tight text-on-primary-container sm:text-3xl md:text-4xl font-serif">
               Inventory that stays fast under pressure.
             </h1>
           </div>

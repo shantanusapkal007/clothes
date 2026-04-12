@@ -20,9 +20,9 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function ProductSkeleton() {
   return (
-    <div className="rounded-3xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md">
+    <div className="rounded-lg border border-outline-variant/30 bg-white/80 p-4 shadow-sm backdrop-blur-md">
       <div className="flex items-start gap-4">
-        <Skeleton className="h-20 w-20 shrink-0 rounded-2xl" />
+        <Skeleton className="h-20 w-20 shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1 py-1 space-y-3">
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-3 w-1/2" />
@@ -37,7 +37,7 @@ export function InventorySkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-3xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md flex items-center justify-between">
+        <div key={i} className="rounded-lg border border-outline-variant/30 bg-white/80 p-4 shadow-sm backdrop-blur-md flex items-center justify-between">
            <div className="flex items-center gap-4">
               <Skeleton className="h-12 w-12 rounded-lg" />
               <div className="space-y-2">

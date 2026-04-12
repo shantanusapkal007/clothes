@@ -26,6 +26,7 @@ export type BillDataWithProducts = Omit<ReturnType<typeof calculateCheckout>, "i
     quantity: number;
     price: number;
     discountPercent: number;
+    manualDiscountAmount: number;
     taxPercent: number;
     lineSubtotal: number;
     discountAmount: number;
@@ -212,6 +213,7 @@ export function PosWorkspace() {
         quantity: item.quantity,
         price: item.price,
         discountPercent: item.discountPercent,
+        manualDiscountAmount: item.manualDiscountAmount,
         taxPercent: item.taxPercent
       }));
 

@@ -10,14 +10,20 @@ function buildApiUrl(path: string) {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(buildApiUrl(path), {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
-    },
-    cache: "no-store"
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(buildApiUrl(path), {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {})
+      },
+      cache: "no-store"
+    });
+  } catch {
+    throw new Error("Unable to reach the server. Check the connection and try again.");
+  }
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type") || "";
@@ -74,6 +80,7 @@ export function checkoutBill(items: CartItem[], paymentMethod: string) {
         quantity: item.quantity,
         price: item.price,
         discountPercent: item.discountPercent,
+        manualDiscountAmount: item.manualDiscountAmount,
         taxPercent: item.taxPercent
       }))
     })

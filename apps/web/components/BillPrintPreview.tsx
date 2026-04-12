@@ -92,22 +92,25 @@ export function BillPrintPreview({
         </div>
 
         <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto bg-white px-2 py-6 text-on-surface justify-start items-center">
-          <div 
-            className="bg-white shadow-sm border border-outline-variant/50 p-4 min-h-[300px]"
-            style={{ width: `${layout.paperWidth || 80}mm`, maxWidth: "100%" }}
-          >
-            <pre 
-              className="m-0 whitespace-pre font-mono mx-auto overflow-hidden text-black"
-              style={{
-                fontSize: receiptFontSize,
-                lineHeight: 1.2,
-                letterSpacing: 0,
-                fontVariantNumeric: "tabular-nums",
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-              }}
+          <div className="hide-scrollbar w-full overflow-x-auto rounded-lg border border-outline-variant/30 bg-[#f8fcfb] p-3">
+            <div
+              className="mx-auto min-h-[300px] rounded-lg border border-outline-variant/20 bg-white p-4 shadow-sm"
+              style={{ width: `${layout.paperWidth || 80}mm`, maxWidth: "100%" }}
             >
-              {buildReceiptText({ ...bill, paymentMethod }, billNumber, layout, paymentMethod)}
-            </pre>
+              <pre
+                className="m-0 whitespace-pre font-mono text-black"
+                style={{
+                  fontSize: receiptFontSize,
+                  lineHeight: 1.2,
+                  letterSpacing: 0,
+                  fontVariantNumeric: "tabular-nums",
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                }}
+              >
+                {buildReceiptText({ ...bill, paymentMethod }, billNumber, layout, paymentMethod)}
+              </pre>
+            </div>
           </div>
         </div>
 

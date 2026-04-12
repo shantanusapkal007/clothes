@@ -20,6 +20,7 @@ export type CartItem = {
   quantity: number;
   price: number;
   discountPercent: number;
+  manualDiscountAmount: number;
   taxPercent: number;
   stock: number;
 };

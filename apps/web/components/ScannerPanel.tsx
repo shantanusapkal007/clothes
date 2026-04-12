@@ -296,7 +296,7 @@ export function ScannerPanel({
             </span>
             <input
               ref={inputRef}
-              className="w-full rounded-lg border-none bg-surface-container-lowest py-3 pl-10 pr-4 font-body text-sm ring-1 ring-outline-variant/30 transition-all focus:ring-2 focus:ring-primary/20 md:py-4 md:pl-12 md:text-base"
+              className="field-input pl-10 md:pl-12"
               placeholder="Scan or enter SKU number..."
               type="text"
               value={barcodeInput}

@@ -119,7 +119,7 @@ export function InventoryManager() {
       <div className="pointer-events-none fixed left-1/2 top-4 z-50 flex w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 flex-col gap-2 sm:w-auto">
         {message && (
           <div
-            className={`pointer-events-auto flex items-center gap-2 rounded-2xl px-4 py-3 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.1)] sm:rounded-full sm:px-6 ${
+            className={`pointer-events-auto flex items-center gap-2 rounded-lg px-4 py-3 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.1)] sm:px-6 ${
               message.Type === "error"
                 ? "bg-error-container text-error"
                 : "bg-emerald-100 text-emerald-800"
@@ -133,7 +133,7 @@ export function InventoryManager() {
         )}
       </div>
 
-      <section className="rounded-[28px] border border-outline-variant/20 bg-surface-container-low p-5 shadow-sm lg:col-span-4 md:p-8">
+      <section className="rounded-lg border border-outline-variant/30 bg-white/95 p-4 shadow-sm lg:col-span-4 md:p-8">
         <div className="mb-6">
           <h3 className="mb-1 text-2xl font-serif text-primary">Add clothing stock fast</h3>
           <p className="text-sm text-on-secondary-container">
@@ -147,7 +147,7 @@ export function InventoryManager() {
               Product Title <span className="text-error">*</span>
             </label>
             <input
-              className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 placeholder:opacity-30 focus:ring-2 focus:ring-primary/20 md:p-4"
+              className="field-input"
               placeholder="e.g. Linen Blouse Ivory"
               type="text"
               required
@@ -162,7 +162,7 @@ export function InventoryManager() {
                 Category
               </label>
               <select
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                className="field-input"
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
@@ -178,7 +178,7 @@ export function InventoryManager() {
                 Barcode (SKU)
               </label>
               <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                className="field-input"
                 placeholder="Auto-generate"
                 type="text"
                 value={form.barcode}
@@ -197,7 +197,7 @@ export function InventoryManager() {
                   Rs
                 </span>
                 <input
-                  className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 pl-11 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4 md:pl-12"
+                  className="field-input pl-11 md:pl-12"
                   placeholder="0.00"
                   type="number"
                   min="0"
@@ -213,7 +213,7 @@ export function InventoryManager() {
                 Initial Stock
               </label>
               <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                className="field-input"
                 placeholder="0"
                 type="number"
                 min="0"
@@ -229,7 +229,7 @@ export function InventoryManager() {
                 Default Discount %
               </label>
               <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                className="field-input"
                 placeholder="0"
                 type="number"
                 min="0"
@@ -244,13 +244,13 @@ export function InventoryManager() {
                 Tax %
               </label>
               <input
-                className="w-full rounded-2xl border-none bg-surface-container-lowest p-3 text-on-surface ring-1 ring-outline-variant/30 focus:ring-2 focus:ring-primary/20 md:p-4"
+                className="field-input"
                 placeholder="0"
                 type="number"
                 min="0"
                 max="100"
                 step="0.01"
-                value={form.taxPercent === 0 ? "" : form.taxPercent}
+                value={form.taxPercent}
                 onChange={(e) => setForm({ ...form, taxPercent: parseFloat(e.target.value) || 0 })}
               />
             </div>
@@ -259,7 +259,7 @@ export function InventoryManager() {
 
           <button
             type="submit"
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary-container active:scale-[0.98]"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary-container active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             Add to Catalog
@@ -267,7 +267,7 @@ export function InventoryManager() {
         </form>
       </section>
 
-      <section className="rounded-[28px] border border-outline-variant/10 bg-surface-container-lowest p-5 shadow-[0_20px_40px_rgba(8,47,46,0.05)] lg:col-span-8 md:p-8">
+      <section className="rounded-lg border border-outline-variant/30 bg-white/95 p-4 shadow-[0_20px_40px_rgba(8,47,46,0.05)] lg:col-span-8 md:p-8">
         <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <h3 className="text-2xl font-serif text-on-surface sm:text-3xl">Current Stock</h3>
@@ -276,19 +276,19 @@ export function InventoryManager() {
             </p>
           </div>
           <div className="flex w-full gap-2 md:w-auto">
-            <div className="flex flex-grow items-center gap-2 rounded-full border border-outline-variant/30 bg-surface-container-low px-4 py-2 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 md:flex-grow-0">
+            <div className="flex flex-grow items-center gap-2 rounded-lg border border-outline-variant/60 bg-white px-4 py-3 shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 md:flex-grow-0 md:py-2">
               <span className="material-symbols-outlined text-sm text-primary md:text-base">
                 search
               </span>
               <input
-                className="w-full border-none bg-transparent p-0 text-sm placeholder:text-on-surface-variant/40 focus:ring-0 md:w-48"
+                className="w-full border-none bg-transparent p-0 text-sm font-semibold text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 md:w-48"
                 placeholder="Search catalog..."
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button className="material-symbols-outlined shrink-0 rounded-full border border-outline-variant/30 p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high">
+            <button className="material-symbols-outlined shrink-0 rounded-lg border border-outline-variant/60 bg-white p-3 text-on-surface-variant shadow-sm transition-colors hover:bg-surface-container-high md:p-2">
               filter_list
             </button>
           </div>
@@ -308,10 +308,10 @@ export function InventoryManager() {
               {visibleProducts.map((p) => (
                 <article
                   key={p.id}
-                  className="rounded-3xl border border-outline-variant/15 bg-surface-container-low/60 p-4 shadow-sm"
+                  className="rounded-lg border border-outline-variant/30 bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-surface-container-high ring-1 ring-outline-variant/20">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container-high ring-1 ring-outline-variant/20">
                       <img
                         alt={p.name}
                         src={getProductImage(p.name)}
@@ -328,7 +328,7 @@ export function InventoryManager() {
                         </div>
                         <button
                           onClick={() => handleDelete(p.id, p.name)}
-                          className="material-symbols-outlined rounded-full p-2 text-error/70 transition-colors hover:bg-error-container hover:text-error"
+                          className="material-symbols-outlined rounded-lg p-2 text-error/70 transition-colors hover:bg-error-container hover:text-error"
                           title="Delete"
                         >
                           delete
@@ -336,12 +336,12 @@ export function InventoryManager() {
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-3">
-                        <label className="rounded-2xl bg-white/70 p-3">
+                        <label className="rounded-lg border border-outline-variant/30 bg-white p-3">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Stock
                           </span>
                           <input
-                            className={`w-full border-none bg-transparent p-0 text-base font-bold focus:ring-0 ${
+                            className={`field-input-compact text-base ${
                               p.stock <= p.minStock ? "text-error" : "text-on-surface"
                             }`}
                             type="number"
@@ -357,14 +357,14 @@ export function InventoryManager() {
                           )}
                         </label>
 
-                        <label className="rounded-2xl bg-white/70 p-3">
+                        <label className="rounded-lg border border-outline-variant/30 bg-white p-3">
                           <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
                             Price
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-secondary">Rs</span>
                             <input
-                              className="w-full border-none bg-transparent p-0 text-right font-serif text-base focus:ring-0"
+                              className="field-input-compact text-right font-serif text-base"
                               type="number"
                               value={p.price}
                               step="0.01"
@@ -416,10 +416,10 @@ export function InventoryManager() {
                       <td className="py-4 text-center md:py-6">
                         <div className="inline-flex flex-col items-center">
                           <input
-                            className={`w-14 rounded-lg border-none p-2 text-center text-sm font-bold transition-colors hover:bg-surface-container-high focus:ring-1 focus:ring-primary/20 md:w-16 ${
+                            className={`w-14 rounded-lg border p-2 text-center text-sm font-bold shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-16 ${
                               p.stock <= p.minStock
-                                ? "bg-error-container/30 text-error ring-1 ring-error/20"
-                                : "bg-surface-container-low/50"
+                                ? "border-error/30 bg-error-container/60 text-error"
+                                : "border-outline-variant/60 bg-white text-on-surface"
                             }`}
                             type="number"
                             value={p.stock}
@@ -438,7 +438,7 @@ export function InventoryManager() {
                         <div className="inline-flex items-center justify-end">
                           <span className="mr-1 text-sm text-secondary">Rs</span>
                           <input
-                            className="w-20 rounded-lg border-none bg-transparent p-2 text-right font-serif text-base transition-colors hover:bg-surface-container-low focus:ring-1 focus:ring-primary/20 md:w-24 md:text-lg"
+                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-base shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24 md:text-lg"
                             type="number"
                             value={p.price}
                             step="0.01"
@@ -452,7 +452,7 @@ export function InventoryManager() {
                         <div className="flex justify-end gap-1 transition-opacity sm:opacity-50 group-hover:opacity-100 md:gap-2">
                           <button
                             onClick={() => handleDelete(p.id, p.name)}
-                            className="material-symbols-outlined rounded-full p-2 text-error/60 transition-colors hover:bg-error-container hover:text-error"
+                            className="material-symbols-outlined rounded-lg p-2 text-error/60 transition-colors hover:bg-error-container hover:text-error"
                             title="Delete"
                           >
                             delete
@@ -472,7 +472,7 @@ export function InventoryManager() {
             <button className="order-2 text-sm font-bold text-primary transition-all hover:underline sm:order-1">
               Download Inventory Report (CSV)
             </button>
-            <div className="order-1 flex items-center gap-4 rounded-full border border-outline-variant/20 bg-surface-container-low px-4 py-2 sm:order-2">
+            <div className="order-1 flex items-center gap-4 rounded-lg border border-outline-variant/30 bg-white px-4 py-2 shadow-sm sm:order-2">
               <span className="text-xs font-medium text-on-secondary-container">
                 {visibleProducts.length} results
               </span>

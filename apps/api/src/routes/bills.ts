@@ -12,6 +12,7 @@ const checkoutSchema = z.object({
         quantity: z.coerce.number().int().positive(),
         price: z.coerce.number().min(0),
         discountPercent: z.coerce.number().min(0),
+        manualDiscountAmount: z.coerce.number().min(0).default(0),
         taxPercent: z.coerce.number().min(0)
       })
     )

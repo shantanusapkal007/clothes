@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { assertDatabaseConfig } from "../../../../../lib/database-url";
+import { getErrorMessage } from "../../../../../lib/errors";
 import { prisma } from "../../../../../lib/prisma";
 import { mapProduct } from "../../../../../lib/server-mappers";
 
@@ -31,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(mapProduct(product));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load product";
+    const message = getErrorMessage(error, "Unable to load product");
     return NextResponse.json({ message }, { status: 500 });
   }
 }

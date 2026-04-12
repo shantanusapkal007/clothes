@@ -132,7 +132,7 @@ export function CreateProductModal({
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-md p-4 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
+              <section className="rounded-lg border border-outline-variant/30 bg-white p-4 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
                 <p className="eyebrow">Pricing & Inventory</p>
                 <div className="inventory-grid">
                   <div className="relative">
@@ -183,7 +183,7 @@ export function CreateProductModal({
                     max={100}
                     step="0.01"
                     placeholder="Tax %"
-                    value={form.taxPercent === 0 ? "" : form.taxPercent}
+                    value={form.taxPercent}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, taxPercent: Number(event.target.value) }))
                     }

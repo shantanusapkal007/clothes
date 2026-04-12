@@ -8,7 +8,7 @@ type CartState = {
   addItem: (product: Product) => void;
   updateItem: (
     productId: string,
-    field: "quantity" | "price" | "discountPercent" | "taxPercent",
+    field: "quantity" | "price" | "discountPercent" | "manualDiscountAmount" | "taxPercent",
     value: number
   ) => void;
   removeItem: (productId: string) => void;
@@ -46,7 +46,8 @@ export const useCartStore = create<CartState>((set) => ({
             quantity: 1,
             price: product.price,
             discountPercent: product.discountPercent,
-            taxPercent: product.taxPercent,
+            manualDiscountAmount: 0,
+            taxPercent: 0,
             stock: product.stock
           },
           ...state.items

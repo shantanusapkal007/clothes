@@ -2,6 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { assertDatabaseConfig } from "../../../lib/database-url";
+import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
 import { prisma } from "../../../lib/prisma";
 import { mapProduct } from "../../../lib/server-mappers";
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(products.map(mapProduct));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load products";
+    const message = getErrorMessage(error, "Unable to load products");
     return NextResponse.json({ message }, { status: 500 });
   }
 }
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(mapProduct(product), { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to create product";
-    return NextResponse.json({ message }, { status: 400 });
+    const message = getErrorMessage(error, "Unable to create product");
+    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
   }
 }

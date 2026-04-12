@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateCheckout } from "../../../lib/billing";
 import { assertDatabaseConfig } from "../../../lib/database-url";
+import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
 import { prisma } from "../../../lib/prisma";
 import { mapBill } from "../../../lib/server-mappers";
 
@@ -17,6 +18,7 @@ const checkoutSchema = z.object({
         quantity: z.coerce.number().int().positive(),
         price: z.coerce.number().min(0),
         discountPercent: z.coerce.number().min(0),
+        manualDiscountAmount: z.coerce.number().min(0).default(0),
         taxPercent: z.coerce.number().min(0)
       })
     )
@@ -37,7 +39,7 @@ export async function GET() {
 
     return NextResponse.json(bills.map(mapBill));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load bills";
+    const message = getErrorMessage(error, "Unable to load bills");
     return NextResponse.json({ message }, { status: 500 });
   }
 }
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to save bill";
-    return NextResponse.json({ message }, { status: 400 });
+    const message = getErrorMessage(error, "Unable to save bill");
+    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
   }
 }

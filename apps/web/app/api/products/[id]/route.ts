@@ -2,6 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { assertDatabaseConfig } from "../../../../lib/database-url";
+import { getApiErrorStatus, getErrorMessage } from "../../../../lib/errors";
 import { prisma } from "../../../../lib/prisma";
 import { mapProduct } from "../../../../lib/server-mappers";
 
@@ -54,8 +55,8 @@ export async function PUT(
 
     return NextResponse.json(mapProduct(product));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update product";
-    return NextResponse.json({ message }, { status: 400 });
+    const message = getErrorMessage(error, "Unable to update product");
+    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
   }
 }
 
@@ -76,7 +77,7 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete product";
-    return NextResponse.json({ message }, { status: 400 });
+    const message = getErrorMessage(error, "Unable to delete product");
+    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { assertDatabaseConfig } from "../../../../lib/database-url";
+import { getErrorMessage } from "../../../../lib/errors";
 import { prisma } from "../../../../lib/prisma";
 import { mapBill } from "../../../../lib/server-mappers";
 
@@ -34,7 +35,7 @@ export async function GET(
 
     return NextResponse.json(mapBill(bill));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load bill";
+    const message = getErrorMessage(error, "Unable to load bill");
     return NextResponse.json({ message }, { status: 500 });
   }
 }

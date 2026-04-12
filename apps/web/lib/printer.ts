@@ -43,6 +43,7 @@ export interface PrintableBillItem {
   price: number;
   total: number;
   discountPercent: number;
+  manualDiscountAmount?: number;
   taxPercent: number;
 }
 
@@ -399,10 +400,15 @@ function buildReceiptLines(
 
     if (
       layout.showItemDetails &&
-      (item.discountPercent > 0 || item.taxPercent > 0)
+      (item.discountPercent > 0 ||
+        (item.manualDiscountAmount ?? 0) > 0 ||
+        item.taxPercent > 0)
     ) {
       const detailParts = [
         item.discountPercent > 0 ? `Disc ${item.discountPercent}%` : "",
+        (item.manualDiscountAmount ?? 0) > 0
+          ? `Less ${formatAmount(item.manualDiscountAmount ?? 0)}`
+          : "",
         item.taxPercent > 0 ? `Tax ${item.taxPercent}%` : "",
       ].filter(Boolean);
       lines.push(`  ${detailParts.join(" | ")}`.slice(0, receiptWidth));
