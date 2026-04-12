@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { CartPanel } from "./CartPanel";
+import { CartPanel, type CheckoutRequest } from "./CartPanel";
 import { CreateProductModal } from "./CreateProductModal";
 import { ProductGrid } from "./ProductGrid";
 import { ScannerPanel } from "./ScannerPanel";
@@ -13,7 +13,8 @@ import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
 import { parseBarcodeData, type BarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
-import { getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
+import { STORE_WHATSAPP_NUMBER, getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
+import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
 import type { Product } from "../types";
 
 import { ProductSkeleton } from "./Skeleton";
@@ -68,6 +69,13 @@ export function PosWorkspace() {
   const [billData, setBillData] = useState<BillDataWithProducts | null>(null);
   const [previewBillNumber, setPreviewBillNumber] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
+  const [pendingWhatsApp, setPendingWhatsApp] = useState<{
+    customerPhone: string;
+    sendWhatsApp: boolean;
+  }>({
+    customerPhone: "",
+    sendWhatsApp: false
+  });
 
   const visibleProducts = useMemo(() => {
     if (!search.trim()) {
@@ -185,11 +193,19 @@ export function PosWorkspace() {
     return product;
   };
 
-  const handleCheckout = async (paymentMethod: string) => {
+  const handleCheckout = async ({
+    paymentMethod,
+    customerPhone,
+    sendWhatsApp
+  }: CheckoutRequest) => {
     try {
       setCheckoutPending(true);
       setError(null);
       setSelectedPaymentMethod(paymentMethod);
+      setPendingWhatsApp({
+        customerPhone,
+        sendWhatsApp
+      });
 
       const checkoutItems = items.map((item) => ({
         productId: item.productId,
@@ -232,18 +248,22 @@ export function PosWorkspace() {
 
       const result = await checkoutBill(items, selectedPaymentMethod);
       const savedBillNumber = result.id.slice(0, 8).toUpperCase();
-      let nextMessage = `Bill ${savedBillNumber} saved successfully`;
-
-      if (shouldPrint && printableBill) {
-        const printRoute = await printReceipt(
-          {
+      const billLayout = getBillLayoutConfig();
+      const savedPrintableBill = printableBill
+        ? {
             ...printableBill,
             paymentMethod: selectedPaymentMethod,
             createdAt: result.createdAt
-          },
+          }
+        : null;
+      let nextMessage = `Bill ${savedBillNumber} saved successfully`;
+
+      if (shouldPrint && savedPrintableBill) {
+        const printRoute = await printReceipt(
+          savedPrintableBill,
           savedBillNumber,
           getPrinterConfig(),
-          getBillLayoutConfig()
+          billLayout
         );
 
         if (printRoute === "device") {
@@ -255,10 +275,24 @@ export function PosWorkspace() {
         }
       }
 
+      if (pendingWhatsApp.sendWhatsApp && pendingWhatsApp.customerPhone && savedPrintableBill) {
+        const whatsAppMessage = buildWhatsAppBillMessage(
+          savedPrintableBill,
+          savedBillNumber,
+          billLayout,
+          selectedPaymentMethod
+        );
+        const opened = openWhatsAppShare(whatsAppMessage, pendingWhatsApp.customerPhone);
+        nextMessage = opened
+          ? `${nextMessage}. WhatsApp bill opened for ${pendingWhatsApp.customerPhone}.`
+          : `${nextMessage}. WhatsApp bill is ready for ${pendingWhatsApp.customerPhone}.`;
+      }
+
       clearCart();
       setBillPreviewOpen(false);
       setBillData(null);
       setPreviewBillNumber("");
+      setPendingWhatsApp({ customerPhone: "", sendWhatsApp: false });
       setMessage(nextMessage);
       await loadProducts();
     } catch (checkoutError) {
@@ -344,6 +378,7 @@ export function PosWorkspace() {
             onCheckout={handleCheckout}
             checkoutPending={checkoutPending}
             onOpenPrinterSettings={() => setPrinterSettingsOpen(true)}
+            storeWhatsAppNumber={STORE_WHATSAPP_NUMBER}
           />
         </div>
       </div>
@@ -369,6 +404,10 @@ export function PosWorkspace() {
           billNumber={previewBillNumber}
           paymentMethod={selectedPaymentMethod}
           printerStatus={printerStatus}
+          whatsAppCustomerPhone={
+            pendingWhatsApp.sendWhatsApp ? pendingWhatsApp.customerPhone : undefined
+          }
+          whatsappSenderPhone={STORE_WHATSAPP_NUMBER}
           confirmPending={checkoutPending}
           onConfirmCheckout={handleConfirmCheckout}
           onClose={() => {
@@ -376,6 +415,7 @@ export function PosWorkspace() {
             setBillData(null);
             setPreviewBillNumber("");
             setCheckoutPending(false);
+            setPendingWhatsApp({ customerPhone: "", sendWhatsApp: false });
           }}
         />
       ) : null}

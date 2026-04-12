@@ -195,9 +195,14 @@ export function ScannerPanel({
           Html5QrcodeSupportedFormats?.UPC_E,
           Html5QrcodeSupportedFormats?.QR_CODE
         ].filter(Boolean);
-
-        const cameras =
-          typeof Html5Qrcode.getCameras === "function" ? await Html5Qrcode.getCameras() : [];
+        let cameras: any[] = [];
+        if (typeof Html5Qrcode.getCameras === "function") {
+          try {
+            cameras = await Html5Qrcode.getCameras();
+          } catch {
+            cameras = [];
+          }
+        }
         const preferredCamera = cameras.find((camera: { label?: string }) =>
           /(rear|back|environment)/i.test(camera.label || "")
         );
@@ -280,7 +285,7 @@ export function ScannerPanel({
 
   return (
     <>
-      <div className="glass-panel rounded-[28px] p-4 shadow-sm md:p-6">
+      <div className="glass-panel rounded-lg p-4 shadow-sm md:p-6">
         <form
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
@@ -307,7 +312,7 @@ export function ScannerPanel({
           <button
             type="button"
             onClick={focusInput}
-            className="flex h-12 items-center justify-center rounded-2xl border border-outline-variant/40 bg-surface-container-lowest px-4 text-on-surface transition-all hover:bg-surface-container-high sm:h-14"
+            className="flex h-12 items-center justify-center rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-4 text-on-surface transition-all hover:bg-surface-container-high sm:h-14"
             title="Focus scanner input"
           >
             Ready
@@ -317,7 +322,7 @@ export function ScannerPanel({
             type="button"
             onClick={() => setCameraOpen(true)}
             disabled={!cameraSupported}
-            className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-on-primary shadow-lg transition-all hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 sm:h-14 sm:w-14 sm:rounded-lg shrink-0"
+            className="flex h-12 w-full items-center justify-center rounded-lg bg-primary text-on-primary shadow-lg transition-all hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 sm:h-14 sm:w-14 shrink-0"
             title={
               cameraSupported
                 ? "Open Camera Scanner"
@@ -331,7 +336,7 @@ export function ScannerPanel({
 
           <button
             type="submit"
-            className="flex h-12 items-center justify-center rounded-2xl bg-primary-fixed px-5 font-semibold text-on-primary-fixed transition-all hover:bg-primary-fixed-dim sm:h-14"
+            className="flex h-12 items-center justify-center rounded-lg bg-primary-fixed px-5 font-semibold text-on-primary-fixed transition-all hover:bg-primary-fixed-dim sm:h-14"
           >
             Add
           </button>
@@ -379,10 +384,10 @@ export function ScannerPanel({
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-3xl border border-outline-variant/20 bg-surface-container-low p-3">
+              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-3">
                 <div
                   id={scannerRegionId}
-                  className="min-h-[280px] overflow-hidden rounded-2xl bg-black/10"
+                  className="min-h-[280px] overflow-hidden rounded-lg bg-black/10"
                 />
               </div>
 
@@ -419,7 +424,7 @@ export function ScannerPanel({
             </div>
 
             <form className="space-y-4" onSubmit={handlePricePromptSubmit}>
-              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 text-sm">
+              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-4 text-sm">
                 <p className="text-on-secondary-container">Scanned barcode</p>
                 <p className="mt-1 font-mono text-on-surface break-all">{pricePromptBarcode}</p>
               </div>

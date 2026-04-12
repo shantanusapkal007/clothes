@@ -111,7 +111,7 @@ export function InventoryManager() {
   const getProductImage = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
-    )}&background=e9e1d7&color=774420&size=128&font-size=0.3`;
+    )}&background=ccfbf1&color=0f766e&size=128&font-size=0.3`;
   };
 
   return (
@@ -267,7 +267,7 @@ export function InventoryManager() {
         </form>
       </section>
 
-      <section className="rounded-[28px] border border-outline-variant/10 bg-surface-container-lowest p-5 shadow-[0_20px_40px_rgba(49,19,0,0.04)] lg:col-span-8 md:p-8">
+      <section className="rounded-[28px] border border-outline-variant/10 bg-surface-container-lowest p-5 shadow-[0_20px_40px_rgba(8,47,46,0.05)] lg:col-span-8 md:p-8">
         <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <h3 className="text-2xl font-serif text-on-surface sm:text-3xl">Current Stock</h3>

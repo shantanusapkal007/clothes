@@ -284,21 +284,21 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
       ? "bg-error-container text-error"
       : messageType === "success"
         ? "bg-emerald-100 text-emerald-800"
-        : "bg-amber-100 text-amber-800";
+        : "bg-secondary-container text-on-secondary-fixed";
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#311300]/40 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#042f2e]/40 p-4 backdrop-blur-md"
     >
       <motion.div 
         initial={{ y: 50, opacity: 0, scale: 0.95 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 20, opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-surface-container-low shadow-[0_40px_100px_rgba(49,19,0,0.2)] border border-white/60 bg-white/80 backdrop-blur-xl"
+        className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-surface-container-low shadow-[0_40px_100px_rgba(8,47,46,0.18)] border border-white/80 bg-white/90 backdrop-blur-xl"
       >
         <div className="border-b border-white/40 bg-white/50 px-6 pb-6 pt-8 md:px-10 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-4">
@@ -365,7 +365,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                   <label className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-primary">
                     Connection Interface
                     {!btAvailable ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-medium lowercase tracking-normal text-amber-700">
+                      <span className="rounded-lg bg-secondary-container px-2 py-0.5 text-[9px] font-medium lowercase tracking-normal text-secondary">
                         bluetooth unavailable
                       </span>
                     ) : null}
@@ -433,7 +433,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                       disabled={!serialAvailable || serialConnecting}
                       className={`flex flex-col items-center gap-3 rounded-xl border-2 bg-surface-container-highest p-4 transition-all hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 md:p-6 ${
                         printerConfig.connectionType === "serial" && printerConfig.connected
-                          ? "border-purple-500 bg-purple-50"
+                          ? "border-secondary bg-secondary-container"
                           : "border-transparent hover:bg-secondary-container"
                       }`}
                     >
@@ -470,7 +470,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                       disabled={!rawbtAvailable}
                       className={`flex flex-col items-center gap-3 rounded-xl border-2 bg-surface-container-highest p-4 transition-all hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 md:p-6 ${
                         printerConfig.connectionType === "rawbt" && printerConfig.connected
-                          ? "border-orange-500 bg-orange-50"
+                          ? "border-tertiary bg-tertiary-fixed"
                           : "border-transparent hover:bg-secondary-container"
                       }`}
                     >
@@ -582,7 +582,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
 
                   {availableSerialPrinters.length > 0 ? (
                     <div className="mb-4">
-                      <span className="mb-2 block text-[9px] font-bold uppercase tracking-wider text-purple-700">Serial</span>
+                      <span className="mb-2 block text-[9px] font-bold uppercase tracking-wider text-secondary">Serial</span>
                       <div className="space-y-2">
                         {availableSerialPrinters.map((printer, index) => (
                           <div
@@ -675,6 +675,21 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                     value={billLayout.companyPhone || ""}
                     onChange={(event) => updateLayout({ companyPhone: event.target.value })}
                   />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-2 ml-1 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                    WhatsApp Sender Number
+                  </span>
+                  <input
+                    className="w-full rounded-xl border-none bg-surface-container-lowest px-5 py-3 font-body ring-1 ring-outline-variant/30 transition-all focus:ring-2 focus:ring-primary/20 md:py-4"
+                    type="tel"
+                    value={billLayout.whatsappSenderPhone || ""}
+                    onChange={(event) => updateLayout({ whatsappSenderPhone: event.target.value })}
+                  />
+                  <p className="mt-2 text-xs text-on-secondary-container">
+                    This number is printed in the bill message. WhatsApp will send from the account active in the browser or phone.
+                  </p>
                 </label>
               </div>
 

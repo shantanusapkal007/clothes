@@ -23,6 +23,7 @@ export interface PrinterConfig {
 export interface BillLayoutConfig {
   companyName: string;
   companyPhone?: string;
+  whatsappSenderPhone?: string;
   companyAddress?: string;
   showItemDetails: boolean;
   showTaxBreakdown: boolean;
@@ -59,6 +60,8 @@ export type PrintTransportResult = "device" | "browser" | "failed";
 
 const PRINTER_STORAGE_KEY = "printer-config";
 const BILL_LAYOUT_STORAGE_KEY = "bill-layout-config";
+
+export const STORE_WHATSAPP_NUMBER = "+919552884468";
 
 const USB_REQUEST_FILTERS = [
   { classCode: 0x07 },
@@ -101,11 +104,13 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
 
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
   companyName: "Friends Boutique",
+  companyPhone: STORE_WHATSAPP_NUMBER,
+  whatsappSenderPhone: STORE_WHATSAPP_NUMBER,
   showItemDetails: true,
   showTaxBreakdown: true,
   showDiscountBreakdown: true,
   footerText: "Thank you for shopping with us!",
-  itemsPerLine: 48,
+  itemsPerLine: 42,
   fontSize: "medium",
   paperWidth: 80,
   marginLeft: 2,
@@ -133,14 +138,14 @@ function getDefaultItemsPerLine(
   fontSize: BillLayoutConfig["fontSize"],
 ): number {
   if (paperWidth <= 58) {
-    return fontSize === "small" ? 42 : fontSize === "large" ? 16 : 32;
+    return fontSize === "small" ? 42 : fontSize === "large" ? 24 : 32;
   }
 
   if (paperWidth >= 110) {
-    return fontSize === "small" ? 80 : fontSize === "large" ? 34 : 68;
+    return fontSize === "small" ? 80 : fontSize === "large" ? 42 : 64;
   }
 
-  return fontSize === "small" ? 64 : fontSize === "large" ? 24 : 48;
+  return fontSize === "small" ? 56 : fontSize === "large" ? 32 : 42;
 }
 
 export function normalizeBillLayoutConfig(
@@ -283,16 +288,24 @@ function wrapText(text: string, width: number): string[] {
 function padLine(left: string, right: string, width: number): string {
   const safeLeft = left.trim();
   const safeRight = right.trim();
-  const remaining = width - safeLeft.length - safeRight.length;
+  const maxRightWidth = Math.max(0, width - 2);
+  const clippedRight =
+    safeRight.length > maxRightWidth
+      ? safeRight.slice(safeRight.length - maxRightWidth)
+      : safeRight;
+  const remaining = width - safeLeft.length - clippedRight.length;
 
   if (remaining >= 1) {
-    return `${safeLeft}${" ".repeat(remaining)}${safeRight}`;
+    return `${safeLeft}${" ".repeat(remaining)}${clippedRight}`;
   }
 
-  const leftSpace = Math.max(4, width - safeRight.length - 1);
-  const clippedLeft = safeLeft.slice(0, leftSpace);
-  const padding = Math.max(1, width - clippedLeft.length - safeRight.length);
-  return `${clippedLeft}${" ".repeat(padding)}${safeRight}`;
+  const leftSpace = Math.max(0, width - clippedRight.length - 1);
+  const clippedLeft =
+    safeLeft.length > leftSpace && leftSpace > 2
+      ? `${safeLeft.slice(0, leftSpace - 2)}..`
+      : safeLeft.slice(0, leftSpace);
+  const padding = Math.max(1, width - clippedLeft.length - clippedRight.length);
+  return `${clippedLeft}${" ".repeat(padding)}${clippedRight}`.slice(0, width);
 }
 
 function centerText(text: string, width: number): string {
@@ -310,6 +323,20 @@ function getMarginCharacters(layout: BillLayoutConfig) {
     left: Math.round(layout.marginLeft / 2),
     right: Math.round(layout.marginRight / 2),
   };
+}
+
+function buildItemAmountLine(item: PrintableBillItem, width: number): string {
+  const amount = item.total.toFixed(2);
+
+  if (width >= 40) {
+    return padLine(
+      `${item.quantity} x ${item.price.toFixed(2)}`,
+      amount,
+      width,
+    );
+  }
+
+  return padLine(`${item.quantity}x${item.price.toFixed(2)}`, amount, width);
 }
 
 function buildReceiptLines(
@@ -357,7 +384,7 @@ function buildReceiptLines(
     ),
   );
   lines.push(separator);
-  lines.push(padLine("Item", "Total", receiptWidth));
+  lines.push(padLine("Item / Qty x Rate", "Amount", receiptWidth));
   lines.push(separator);
 
   for (const item of bill.items) {
@@ -368,13 +395,7 @@ function buildReceiptLines(
       lines.push(index === 0 ? line : `  ${line}`.slice(0, receiptWidth));
     }
 
-    lines.push(
-      padLine(
-        `${item.quantity} x ${item.price.toFixed(2)}`,
-        item.total.toFixed(2),
-        receiptWidth,
-      ),
-    );
+    lines.push(buildItemAmountLine(item, receiptWidth));
 
     if (
       layout.showItemDetails &&
@@ -384,7 +405,7 @@ function buildReceiptLines(
         item.discountPercent > 0 ? `Disc ${item.discountPercent}%` : "",
         item.taxPercent > 0 ? `Tax ${item.taxPercent}%` : "",
       ].filter(Boolean);
-      lines.push(detailParts.join(" | "));
+      lines.push(`  ${detailParts.join(" | ")}`.slice(0, receiptWidth));
     }
   }
 
@@ -1052,10 +1073,10 @@ export function openBrowserPrintWindow(
         : "80mm";
   const fontSize =
     layout.fontSize === "small"
-      ? "11px"
+      ? "10px"
       : layout.fontSize === "large"
-        ? "14px"
-        : "12px";
+        ? "13px"
+        : "11px";
 
   printWindow.document.write(`<!doctype html>
 <html>
@@ -1063,15 +1084,20 @@ export function openBrowserPrintWindow(
     <title>Receipt Print</title>
     <style>
       @page { margin: 0; size: ${pageWidth} auto; }
-      body { margin: 0; padding: 2mm; background: #ffffff; color: #000; display: flex; justify-content: center; }
+      html, body { width: ${pageWidth}; }
+      body { margin: 0; padding: 2mm; background: #ffffff; color: #000; box-sizing: border-box; }
       pre {
         margin: 0;
         white-space: pre;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: calc((${pageWidth} - 4mm) / ${layout.itemsPerLine} * 1.6);
+        font-size: ${fontSize};
         line-height: 1.2;
-        max-width: 100%;
+        width: calc(${pageWidth} - 4mm);
+        max-width: calc(${pageWidth} - 4mm);
         overflow: hidden;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+        box-sizing: border-box;
       }
     </style>
   </head>

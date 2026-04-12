@@ -1,10 +1,11 @@
-import type { BillLayoutConfig } from "./printer";
+import { STORE_WHATSAPP_NUMBER, type BillLayoutConfig } from "./printer";
 
 type ShareableBill = {
   totalAmount: number;
   discountAmount: number;
   taxAmount: number;
   finalAmount: number;
+  createdAt?: string;
   items?: Array<{
     productName: string;
     quantity: number;
@@ -17,6 +18,16 @@ function normalizePhone(phone: string) {
   return phone.replace(/[^\d]/g, "");
 }
 
+function formatMessageDate(createdAt?: string) {
+  const date = createdAt ? new Date(createdAt) : new Date();
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toLocaleString("en-IN");
+  }
+
+  return date.toLocaleString("en-IN");
+}
+
 export function buildWhatsAppBillMessage(
   bill: ShareableBill,
   billNumber: string,
@@ -24,11 +35,16 @@ export function buildWhatsAppBillMessage(
   paymentMethod: string
 ) {
   const lines: string[] = [];
+  const senderPhone =
+    billLayout.whatsappSenderPhone ||
+    billLayout.companyPhone ||
+    STORE_WHATSAPP_NUMBER;
 
   lines.push(`${billLayout.companyName || "Friends Boutique"} Bill`);
   lines.push(`Bill No: ${billNumber}`);
   lines.push(`Payment: ${paymentMethod.toUpperCase()}`);
-  lines.push(`Date: ${new Date().toLocaleString()}`);
+  lines.push(`Date: ${formatMessageDate(bill.createdAt)}`);
+  lines.push(`From: ${senderPhone}`);
 
   if (bill.items?.length) {
     lines.push("");
@@ -46,9 +62,7 @@ export function buildWhatsAppBillMessage(
   lines.push(`Tax: Rs ${bill.taxAmount.toFixed(2)}`);
   lines.push(`Total: Rs ${bill.finalAmount.toFixed(2)}`);
 
-  if (billLayout.companyPhone) {
-    lines.push(`Store Contact: ${billLayout.companyPhone}`);
-  }
+  lines.push(`Store WhatsApp: ${senderPhone}`);
 
   lines.push("");
   lines.push(billLayout.footerText || "Thank you for shopping with us.");
@@ -63,5 +77,12 @@ export function openWhatsAppShare(message: string, phone?: string) {
     ? `https://wa.me/${normalizedPhone}?text=${encodedMessage}`
     : `https://wa.me/?text=${encodedMessage}`;
 
-  window.open(url, "_blank", "noopener,noreferrer");
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+
+  if (!popup) {
+    window.location.href = url;
+    return false;
+  }
+
+  return true;
 }
