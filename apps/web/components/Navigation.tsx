@@ -2,15 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function Navigation() {
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
+  const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
 
   const navItems = [
     { name: "Sales", href: "/" as const, icon: "payments" },
@@ -19,9 +15,10 @@ export function Navigation() {
 
   return (
     <>
-      <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant/50 bg-white/90 px-3 shadow-sm backdrop-blur-md sm:px-4 md:px-8">
+      {/* ─── Top Header ─── */}
+      <header className="fixed left-0 top-0 z-50 flex h-14 w-full items-center justify-between border-b border-outline-variant/50 bg-white/90 px-3 shadow-sm backdrop-blur-md sm:h-16 sm:px-4 md:px-8">
         <div className="flex min-w-0 items-center gap-3 md:gap-12">
-          <h1 className="truncate text-lg font-serif tracking-tight text-primary sm:text-xl md:text-2xl">
+          <h1 className="truncate text-base font-serif tracking-tight text-primary sm:text-xl md:text-2xl">
             FRIENDS BOUTIQUE
           </h1>
           <nav className="hidden md:flex items-center gap-8 h-16">
@@ -57,39 +54,10 @@ export function Navigation() {
               className="w-full h-full object-cover"
             />
           </div>
-          {/* Mobile menu button */}
-          <button 
-            className="material-symbols-outlined inline-flex rounded-lg p-2 text-on-secondary-container transition-colors cursor-pointer active:opacity-70 hover:text-primary md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {mobileMenuOpen ? "close" : "menu"}
-          </button>
         </div>
       </header>
 
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="fixed left-0 top-16 z-40 flex w-full flex-col border-b border-outline-variant/50 bg-white/95 p-3 shadow-lg backdrop-blur md:hidden">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link 
-                key={item.name}
-                href={item.href} 
-                className={`mb-2 flex items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
-                  isActive ? "bg-primary-fixed text-primary font-bold" : "text-on-secondary-container hover:bg-surface-container-high"
-                }`}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Side Navigation Anchor (Desktop Only) */}
+      {/* ─── Desktop Sidebar ─── */}
       <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] py-8 flex-col gap-2 w-64 bg-white/90 shadow-[20px_0_40px_rgba(8,47,40,0.05)] z-40 hidden md:flex border-r border-outline-variant/40 backdrop-blur-md">
         <div className="px-8 mb-8">
           <h4 className="text-lg font-serif italic text-primary">Back Office</h4>
@@ -134,12 +102,29 @@ export function Navigation() {
               />
             </div>
             <div>
-              <p className="text-xs font-bold text-primary">v2.4.0</p>
-              <p className="text-[10px] text-on-secondary-container">Floor-ready POS</p>
+              <p className="text-xs font-bold text-primary">v2.5.0</p>
+              <p className="text-[10px] text-on-secondary-container">Mobile-ready POS</p>
             </div>
           </div>
         </div>
       </aside>
+
+      {/* ─── Mobile Bottom Tab Bar ─── */}
+      <nav className="bottom-tab-bar" aria-label="Main navigation">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`bottom-tab ${isActive ? "bottom-tab--active" : "bottom-tab--inactive"}`}
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 }

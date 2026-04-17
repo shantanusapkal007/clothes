@@ -1,5 +1,11 @@
 import { motion } from "framer-motion";
-import { getBillLayoutConfig, buildReceiptText } from "../lib/printer";
+import {
+  buildReceiptText,
+  getBillLayoutConfig,
+  isIosBrowser,
+  isShareAvailable,
+  shareReceiptText
+} from "../lib/printer";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -26,75 +32,100 @@ export function BillPrintPreview({
   confirmPending
 }: BillPrintPreviewProps) {
   const layout = getBillLayoutConfig();
-  const receiptWidthClass = layout.paperWidth <= 58 ? "sm:max-w-[22rem]" : layout.paperWidth >= 110 ? "sm:max-w-[32rem]" : "sm:max-w-md";
+  const iosBrowser = isIosBrowser();
+  const shareAvailable = isShareAvailable();
   const receiptFontSize =
     layout.fontSize === "small"
       ? "10px"
       : layout.fontSize === "large"
         ? "13px"
         : "11px";
+
+  const receiptContent = buildReceiptText(
+    { ...bill, paymentMethod },
+    billNumber,
+    layout,
+    paymentMethod
+  );
+
   const confirmPrintLabel = whatsAppCustomerPhone
-    ? "Confirm, Print & Open WhatsApp"
-    : "Confirm & Print Receipt";
+    ? iosBrowser
+      ? "Confirm & AirPrint + WhatsApp"
+      : "Confirm & Print + WhatsApp"
+    : iosBrowser
+      ? "Confirm & AirPrint"
+      : "Confirm & Print";
+
   const confirmSaveLabel = whatsAppCustomerPhone
-    ? "Save & Open WhatsApp"
-    : "Save without printing";
+    ? "Save & WhatsApp"
+    : "Save only";
+
+  const handleShare = async () => {
+    await shareReceiptText(receiptContent, billNumber);
+  };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-[#042f2e]/40 p-4 backdrop-blur-md"
-    >
-      <motion.div 
-        initial={{ y: 50, opacity: 0, scale: 0.95 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 20, opacity: 0, scale: 0.95 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={`relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-lg border border-white/80 bg-surface-container-lowest shadow-[0_40px_100px_rgba(8,47,46,0.18)] ${receiptWidthClass}`}
-      >
-        <div className="relative -mb-2 flex h-6 justify-center gap-2 overflow-hidden bg-surface-container-lowest pt-2">
-          <div className="absolute top-0 flex h-2 w-full justify-between space-x-[2px] bg-transparent">
-            {[...Array(30)].map((_, index) => (
-              <div
-                key={index}
-                className="h-2 w-2 origin-top-left -translate-y-1 rotate-45 bg-[#042f2e]/60"
-              />
-            ))}
-          </div>
-        </div>
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[110] bg-[#042f2e]/40 backdrop-blur-md"
+        onClick={confirmPending ? undefined : onClose}
+      />
 
-        <div className="absolute right-2 top-2 z-10 flex justify-end p-4">
+      {/* Bottom sheet / modal */}
+      <motion.div
+        initial={{ y: "100%", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: "100%", opacity: 0 }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        className="fixed inset-x-0 bottom-0 z-[111] flex max-h-[95vh] flex-col rounded-t-2xl bg-white shadow-[0_-20px_60px_rgba(8,47,40,0.2)] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        {/* Drag handle (mobile) */}
+        <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-outline-variant/40 sm:hidden" />
+
+        {/* Close button */}
+        <div className="flex items-center justify-between px-4 pt-2 pb-2 sm:pt-4">
+          <div className="text-xs text-on-secondary-container">
+            <span className="font-semibold uppercase tracking-[0.15em]">Print via </span>
+            <span>{printerStatus}</span>
+          </div>
           <button
-            className="material-symbols-outlined cursor-pointer rounded-lg border border-outline-variant/20 bg-surface-container-highest p-2 text-secondary shadow-sm transition-colors hover:text-error"
+            className="material-symbols-outlined cursor-pointer rounded-lg p-1.5 text-secondary transition-colors hover:text-error"
             onClick={onClose}
             disabled={confirmPending}
+            type="button"
           >
             close
           </button>
         </div>
 
-        <div className="border-b border-outline-variant/20 bg-surface-container-high px-4 py-3 text-xs text-on-secondary-container sm:px-6">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-semibold uppercase tracking-[0.18em]">Print Path</span>
-            <span>{printerStatus}</span>
+        {/* iOS / WhatsApp info */}
+        {(iosBrowser || whatsAppCustomerPhone) && (
+          <div className="border-t border-outline-variant/20 px-4 py-2 text-[10px] text-on-secondary-container space-y-1 md:text-xs">
+            {iosBrowser && (
+              <p className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px] text-blue-600">phone_iphone</span>
+                AirPrint will open via Safari print sheet
+              </p>
+            )}
+            {whatsAppCustomerPhone && (
+              <p className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px] text-emerald-600">chat</span>
+                WhatsApp: {whatsappSenderPhone ? `${whatsappSenderPhone} → ` : ""}{whatsAppCustomerPhone}
+              </p>
+            )}
           </div>
-          {whatsAppCustomerPhone ? (
-            <div className="mt-2 flex items-center justify-between gap-3 border-t border-outline-variant/20 pt-2">
-              <span className="font-semibold uppercase tracking-[0.18em]">WhatsApp</span>
-              <span className="text-right">
-                {whatsappSenderPhone ? `${whatsappSenderPhone} to ` : ""}
-                {whatsAppCustomerPhone}
-              </span>
-            </div>
-          ) : null}
-        </div>
+        )}
 
-        <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto bg-white px-2 py-6 text-on-surface justify-start items-center">
-          <div className="hide-scrollbar w-full overflow-x-auto rounded-lg border border-outline-variant/30 bg-[#f8fcfb] p-3">
+        {/* Receipt Preview */}
+        <div className="flex-1 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest px-3 py-4 sm:px-4">
+          <div className="hide-scrollbar overflow-x-auto rounded-lg border border-outline-variant/20 bg-[#f8fcfb] p-2">
             <div
-              className="mx-auto min-h-[300px] rounded-lg border border-outline-variant/20 bg-white p-4 shadow-sm"
+              className="mx-auto rounded-lg border border-outline-variant/20 bg-white p-3 shadow-sm"
               style={{ width: `${layout.paperWidth || 80}mm`, maxWidth: "100%" }}
             >
               <pre
@@ -108,35 +139,52 @@ export function BillPrintPreview({
                     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
                 }}
               >
-                {buildReceiptText({ ...bill, paymentMethod }, billNumber, layout, paymentMethod)}
+                {receiptContent}
               </pre>
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-outline-variant/30 bg-surface-container-high p-4">
+        {/* Action Buttons — sticky bottom */}
+        <div className="shrink-0 space-y-2 border-t border-outline-variant/30 bg-white p-3 pb-safe sm:p-4">
+          {/* Primary: Print & Confirm */}
           <button
             onClick={() => onConfirmCheckout(true)}
             disabled={confirmPending}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 font-bold text-on-primary shadow-md transition-all hover:bg-primary-container active:scale-[0.98] disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 text-sm font-bold text-on-primary shadow-md transition-all active:scale-[0.98] disabled:opacity-60 md:py-4"
           >
             {confirmPending ? (
-              <span className="material-symbols-outlined animate-spin text-xl">refresh</span>
+              <span className="material-symbols-outlined animate-spin text-lg">refresh</span>
             ) : (
-              <span className="material-symbols-outlined text-xl">print</span>
+              <span className="material-symbols-outlined text-lg">print</span>
             )}
-            {confirmPending ? "Processing..." : confirmPrintLabel}
+            {confirmPending ? "Processing…" : confirmPrintLabel}
           </button>
 
-          <button
-            onClick={() => onConfirmCheckout(false)}
-            disabled={confirmPending}
-            className="w-full rounded-lg border border-outline-variant/30 bg-transparent py-3 text-sm font-bold text-primary transition-all hover:bg-surface-container-highest"
-          >
-            {confirmSaveLabel}
-          </button>
+          <div className="flex gap-2">
+            {/* Share receipt (iOS + Android) */}
+            {shareAvailable && (
+              <button
+                onClick={handleShare}
+                disabled={confirmPending}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[16px]">share</span>
+                Share
+              </button>
+            )}
+
+            {/* Save without printing */}
+            <button
+              onClick={() => onConfirmCheckout(false)}
+              disabled={confirmPending}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-on-secondary-container transition active:scale-95"
+            >
+              {confirmSaveLabel}
+            </button>
+          </div>
         </div>
       </motion.div>
-    </motion.div>
+    </>
   );
 }

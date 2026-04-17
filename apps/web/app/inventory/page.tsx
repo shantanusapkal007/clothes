@@ -2,7 +2,7 @@ import { InventoryManager } from "../../components/InventoryManager";
 
 export default function InventoryPage() {
   return (
-    <main className="min-h-screen px-3 pb-10 pt-20 sm:px-4 md:ml-64 md:px-8 md:pb-12 md:pt-24">
+    <main className="app-shell min-h-screen px-2 pb-4 pt-[3.75rem] sm:px-4 sm:pt-20 md:ml-64 md:px-8 md:pb-12 md:pt-24">
       <div className="max-w-6xl mx-auto">
         <header className="relative mb-5 flex min-h-[150px] flex-col justify-end overflow-hidden rounded-lg bg-primary-container p-4 shadow-lg sm:p-6 md:mb-8 md:min-h-[260px] md:p-10">
           <div className="absolute inset-0 z-0">

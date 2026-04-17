@@ -2,8 +2,9 @@ import { PosWorkspace } from "../components/PosWorkspace";
 
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-[1600px] px-3 pb-10 pt-20 sm:px-4 md:ml-64 md:px-8 md:pb-12 md:pt-24">
-      <section className="mb-5 rounded-lg border border-white/80 bg-white/85 p-4 shadow-[0_18px_60px_rgba(8,47,40,0.06)] backdrop-blur-xl md:mb-8 md:p-6">
+    <main className="app-shell mx-auto max-w-[1600px] px-2 pb-4 pt-[3.75rem] sm:px-4 sm:pt-20 md:ml-64 md:px-8 md:pb-12 md:pt-24">
+      {/* Hero banner — hidden on small mobile, visible on larger screens */}
+      <section className="mb-3 hidden rounded-lg border border-white/80 bg-white/85 p-4 shadow-[0_18px_60px_rgba(8,47,40,0.06)] backdrop-blur-xl sm:block md:mb-8 md:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <span className="text-xs font-semibold tracking-widest text-primary uppercase">SALES FLOOR</span>

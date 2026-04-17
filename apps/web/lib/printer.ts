@@ -501,6 +501,20 @@ export function isSerialAvailable(): boolean {
   );
 }
 
+export function isIosBrowser(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+
+  return (
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 export async function getAvailableUsbPrinters(): Promise<PrinterConfig[]> {
   if (!isUsbAvailable()) {
     return [];
@@ -1058,36 +1072,12 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;");
 }
 
-export function openBrowserPrintWindow(
-  content: string,
-  layout: BillLayoutConfig = getBillLayoutConfig(),
-): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const printWindow = window.open("", "PRINT", "height=720,width=480");
-  if (!printWindow) {
-    return false;
-  }
-
-  const pageWidth =
-    layout.paperWidth <= 58
-      ? "58mm"
-      : layout.paperWidth >= 110
-        ? "110mm"
-        : "80mm";
-  const fontSize =
-    layout.fontSize === "small"
-      ? "10px"
-      : layout.fontSize === "large"
-        ? "13px"
-        : "11px";
-
-  printWindow.document.write(`<!doctype html>
+function buildPrintDocument(content: string, pageWidth: string, fontSize: string) {
+  return `<!doctype html>
 <html>
   <head>
     <title>Receipt Print</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       @page { margin: 0; size: ${pageWidth} auto; }
       html, body { width: ${pageWidth}; }
@@ -1110,7 +1100,123 @@ export function openBrowserPrintWindow(
   <body>
     <pre>${escapeHtml(content)}</pre>
   </body>
-</html>`);
+</html>`;
+}
+
+function openIframePrintWindow(html: string): boolean {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  try {
+    // On iOS, we need a more visible iframe so Safari properly renders & prints.
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.left = "0";
+    iframe.style.top = "0";
+    iframe.style.width = "100vw";
+    iframe.style.height = "100vh";
+    iframe.style.opacity = "0.01";
+    iframe.style.pointerEvents = "none";
+    iframe.style.border = "0";
+    iframe.style.zIndex = "99999";
+    document.body.appendChild(iframe);
+
+    const frameWindow = iframe.contentWindow;
+    const frameDocument = frameWindow?.document;
+    if (!frameWindow || !frameDocument) {
+      iframe.remove();
+      return false;
+    }
+
+    frameDocument.open();
+    frameDocument.write(html);
+    frameDocument.close();
+
+    // Longer delay for iOS Safari to fully render the content.
+    window.setTimeout(() => {
+      try {
+        frameWindow.focus();
+        frameWindow.print();
+      } finally {
+        window.setTimeout(() => iframe.remove(), 3000);
+      }
+    }, 600);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check whether the Web Share API is available (iOS Safari, Android Chrome, etc).
+ */
+export function isShareAvailable(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function"
+  );
+}
+
+/**
+ * Share receipt text using the Web Share API.
+ * On iOS this opens the native share sheet where the user can AirPrint,
+ * copy to Notes, send via Messages/WhatsApp, etc.
+ */
+export async function shareReceiptText(
+  content: string,
+  billNumber: string,
+): Promise<boolean> {
+  if (!isShareAvailable()) {
+    return false;
+  }
+
+  try {
+    await navigator.share({
+      title: `Receipt ${billNumber}`,
+      text: content,
+    });
+    return true;
+  } catch {
+    // User cancelled or share failed — not an error.
+    return false;
+  }
+}
+
+export function openBrowserPrintWindow(
+  content: string,
+  layout: BillLayoutConfig = getBillLayoutConfig(),
+): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const pageWidth =
+    layout.paperWidth <= 58
+      ? "58mm"
+      : layout.paperWidth >= 110
+        ? "110mm"
+        : "80mm";
+  const fontSize =
+    layout.fontSize === "small"
+      ? "10px"
+      : layout.fontSize === "large"
+        ? "13px"
+        : "11px";
+  const html = buildPrintDocument(content, pageWidth, fontSize);
+
+  if (isIosBrowser()) {
+    return openIframePrintWindow(html);
+  }
+
+  const printWindow = window.open("", "PRINT", "height=720,width=480");
+  if (!printWindow) {
+    return false;
+  }
+
+  printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
   window.setTimeout(() => {
@@ -1150,6 +1256,7 @@ export async function sendPrintData(
 
   return false;
 }
+
 export async function printReceipt(
   bill: PrintableBillData,
   billNumber: string,
@@ -1177,5 +1284,8 @@ export async function printReceipt(
     }
   }
 
+  // On iOS, try browser print (iframe-based AirPrint trigger).
+  // This is the most reliable path for iOS Safari.
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
 }
+

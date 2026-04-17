@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CartPanel, type CheckoutRequest } from "./CartPanel";
 import { CreateProductModal } from "./CreateProductModal";
 import { ProductGrid } from "./ProductGrid";
@@ -13,7 +13,13 @@ import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
 import { parseBarcodeData, type BarcodeData } from "../lib/barcode-parser";
 import { calculateCheckout } from "../lib/billing";
-import { STORE_WHATSAPP_NUMBER, getBillLayoutConfig, getPrinterConfig, printReceipt } from "../lib/printer";
+import {
+  STORE_WHATSAPP_NUMBER,
+  getBillLayoutConfig,
+  getPrinterConfig,
+  isIosBrowser,
+  printReceipt
+} from "../lib/printer";
 import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
 import type { Product } from "../types";
 
@@ -43,7 +49,7 @@ function createPreviewBillNumber() {
 function describePrinterRoute() {
   const printerConfig = getPrinterConfig();
   if (!printerConfig.connected || printerConfig.connectionType === "none") {
-    return "Browser print fallback";
+    return isIosBrowser() ? "Safari print / AirPrint" : "Browser print fallback";
   }
 
   if (printerConfig.connectionType === "rawbt") {
@@ -52,6 +58,8 @@ function describePrinterRoute() {
 
   return `${printerConfig.connectionType.toUpperCase()} printer: ${printerConfig.name}`;
 }
+
+type MobileView = "products" | "cart";
 
 export function PosWorkspace() {
   const { addItem, items, clearCart, updateItem } = useCartStore();
@@ -70,6 +78,7 @@ export function PosWorkspace() {
   const [billData, setBillData] = useState<BillDataWithProducts | null>(null);
   const [previewBillNumber, setPreviewBillNumber] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
+  const [mobileView, setMobileView] = useState<MobileView>("products");
   const [pendingWhatsApp, setPendingWhatsApp] = useState<{
     customerPhone: string;
     sendWhatsApp: boolean;
@@ -112,9 +121,16 @@ export function PosWorkspace() {
     void loadProducts();
   }, []);
 
+  // Auto-clear messages after 4s
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   const handleProductAdd = (product: Product) => {
     addItem(product);
-    setMessage(`${product.name} added to cart`);
+    setMessage(`${product.name} added`);
     setError(null);
   };
 
@@ -258,7 +274,7 @@ export function PosWorkspace() {
             createdAt: result.createdAt
           }
         : null;
-      let nextMessage = `Bill ${savedBillNumber} saved successfully`;
+      let nextMessage = `Bill ${savedBillNumber} saved`;
 
       if (shouldPrint && savedPrintableBill) {
         const printRoute = await printReceipt(
@@ -269,11 +285,11 @@ export function PosWorkspace() {
         );
 
         if (printRoute === "device") {
-          nextMessage = `${nextMessage} and sent to the configured printer`;
+          nextMessage = `${nextMessage} — sent to printer`;
         } else if (printRoute === "browser") {
-          nextMessage = `${nextMessage}. Browser print preview opened because no direct printer connection was available.`;
+          nextMessage = `${nextMessage} — print preview opened`;
         } else {
-          setError("Bill saved, but printing failed. Check the printer connection and try again.");
+          setError("Bill saved, but printing failed. Check the printer connection.");
         }
       }
 
@@ -286,8 +302,8 @@ export function PosWorkspace() {
         );
         const opened = openWhatsAppShare(whatsAppMessage, pendingWhatsApp.customerPhone);
         nextMessage = opened
-          ? `${nextMessage}. WhatsApp bill opened for ${pendingWhatsApp.customerPhone}.`
-          : `${nextMessage}. WhatsApp bill is ready for ${pendingWhatsApp.customerPhone}.`;
+          ? `${nextMessage}. WhatsApp opened.`
+          : `${nextMessage}. WhatsApp ready.`;
       }
 
       clearCart();
@@ -295,6 +311,7 @@ export function PosWorkspace() {
       setBillData(null);
       setPreviewBillNumber("");
       setPendingWhatsApp({ customerPhone: "", sendWhatsApp: false });
+      setMobileView("products");
       setMessage(nextMessage);
       await loadProducts();
     } catch (checkoutError) {
@@ -306,6 +323,7 @@ export function PosWorkspace() {
 
   return (
     <>
+      {/* ─── Stats Strip ─── */}
       <section className="ops-strip">
         <div className="ops-card">
           <span className="ops-label">Catalog</span>
@@ -319,13 +337,42 @@ export function PosWorkspace() {
         </div>
         <div className="ops-card">
           <span className="ops-label">Payable</span>
-          <strong>Rs {cartSummary.finalAmount.toFixed(2)}</strong>
+          <strong>₹{cartSummary.finalAmount.toFixed(0)}</strong>
           <span className="ops-help">live checkout total</span>
         </div>
       </section>
 
+      {/* ─── Mobile Tab Switcher (visible < xl) ─── */}
+      <div className="mb-3 xl:hidden">
+        <div className="mobile-tab-bar">
+          <button
+            type="button"
+            className={`mobile-tab ${mobileView === "products" ? "mobile-tab--active" : "mobile-tab--inactive"}`}
+            onClick={() => setMobileView("products")}
+          >
+            <span className="material-symbols-outlined text-[18px]">storefront</span>
+            Products
+          </button>
+          <button
+            type="button"
+            className={`mobile-tab ${mobileView === "cart" ? "mobile-tab--active" : "mobile-tab--inactive"}`}
+            onClick={() => setMobileView("cart")}
+          >
+            <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
+            Cart
+            {items.length > 0 && (
+              <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
+                {items.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Workspace Grid ─── */}
       <div className="workspace-grid">
-        <div className="workspace-left">
+        {/* Left: Products — hidden on mobile when cart tab is active */}
+        <div className={`workspace-left ${mobileView === "cart" ? "hidden xl:block" : ""}`}>
           <ScannerPanel
             barcodeInput={barcodeInput}
             setBarcodeInput={setBarcodeInput}
@@ -348,7 +395,7 @@ export function PosWorkspace() {
           </section>
 
           {loading ? (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ProductSkeleton key={i} />
               ))}
@@ -358,14 +405,16 @@ export function PosWorkspace() {
           )}
         </div>
 
-        <div className="workspace-right">
+        {/* Right: Cart — hidden on mobile when products tab is active */}
+        <div className={`workspace-right ${mobileView === "products" ? "hidden xl:block" : ""}`}>
           <div className="panel-options">
             <button
               className="button button-secondary button-small"
               onClick={() => setPrinterSettingsOpen(true)}
               title="Configure thermal printer and bill layout"
             >
-              Printer Settings
+              <span className="material-symbols-outlined text-[16px] mr-1.5">print</span>
+              Printer
             </button>
             <button
               className="button button-ghost button-small"
@@ -385,7 +434,32 @@ export function PosWorkspace() {
         </div>
       </div>
 
-      {message ? <p className="success-text">{message}</p> : null}
+      {/* ─── Floating Cart Badge (mobile only, when on products tab with items) ─── */}
+      {mobileView === "products" && items.length > 0 && (
+        <button
+          type="button"
+          className="floating-cart-badge xl:hidden"
+          onClick={() => setMobileView("cart")}
+        >
+          <span className="material-symbols-outlined text-xl">shopping_cart</span>
+          <span>{items.length} — ₹{cartSummary.finalAmount.toFixed(0)}</span>
+        </button>
+      )}
+
+      {/* ─── Status Messages ─── */}
+      <AnimatePresence>
+        {message ? (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="success-text"
+          >
+            {message}
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
+
       {error ? (
         <div className="error-card">
           <p className="error-text">{error}</p>
@@ -394,11 +468,12 @@ export function PosWorkspace() {
             type="button"
             onClick={() => void loadProducts()}
           >
-            Retry loading
+            Retry
           </button>
         </div>
       ) : null}
 
+      {/* ─── Modals ─── */}
       <AnimatePresence>
       {billPreviewOpen && billData ? (
         <BillPrintPreview
